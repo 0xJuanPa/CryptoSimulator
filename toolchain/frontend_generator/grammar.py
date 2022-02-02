@@ -166,7 +166,7 @@ class Production:
         self.attribute = attribute
 
     def __repr__(self):
-        res = f"{self.left_part} -> {self.right_part} {{{self.attribute}}}"
+        res = f"{self.left_part} -> {self.right_part}" + (f"{{{self.attribute}}}" if self.attribute else "")
         return res
 
     def __hash__(self):
@@ -181,6 +181,8 @@ class LRitem:
     def __init__(self, production: Production, dot_pos: int = 0, lookaheads: Iterable[Symbol] = None):
         self.production = production
         self.dot_pos = dot_pos
+        if isinstance(self.production.right_part[0], Epsilon):  # trick to make epsilon items as reduce items
+            self.dot_pos += 1
         self.lookaheads = frozenset(list(lookaheads) if lookaheads is not None else list())
 
     @property
@@ -196,6 +198,7 @@ class LRitem:
             return LRitem(self.production, self.dot_pos + 1, self.lookaheads)
 
     def get_as_item_lr0(self):
+        """get copy of item whithout lookahead  (lr0 or center)"""
         res = LRitem(self.production, self.dot_pos)
         return res
 
@@ -222,7 +225,7 @@ class Grammar:
     def __init__(self):
         self.eof: EOF = EOF()
         self.epsilon: Epsilon = Epsilon()
-        self.terminals: List[Terminal | EOF] = [self.eof]
+        self.terminals: List[Terminal | EOF] = [self.eof, self.epsilon]
         self.non_terminals: List[NonTerminal] = []
         self.productions: List[Production] = list()
         self.initial_symbol: NonTerminal | None = None
@@ -283,7 +286,7 @@ class Grammar:
     def _get_lr1_closure(self, items: Iterable[LRitem]) -> frozenset[LRitem]:
         # lr1 closure is get all .Nonterminal items with theri lookaheads
         closure = deque(items)
-        new_items: Dict[LRitem, LRitem] = {i.get_as_item_lr0(): i for i in items}
+        canonical: Dict[LRitem, LRitem] = {i.get_as_item_lr0(): i for i in items}
         while closure:
             item = closure.popleft()
             next_symbol = item.peek_nxt_symbol()
@@ -294,13 +297,13 @@ class Grammar:
                     lookaheads.update(local_first)
                 for prod in next_symbol.associated_productions:
                     lr0_itm = LRitem(prod)
-                    if (itm := new_items.get(lr0_itm, None)) is None:
+                    if (itm := canonical.get(lr0_itm, None)) is None:
                         itm = LRitem(prod, 0, lookaheads)
-                        new_items[lr0_itm] = itm
+                        canonical[lr0_itm] = itm
                         closure.append(itm)
                     else:
                         itm.lookaheads = frozenset(chain(itm.lookaheads, lookaheads))
-        res = frozenset(new_items.values())
+        res = frozenset(canonical.values())
         return res
 
     def write_lexer(self, path) -> None:
@@ -315,8 +318,49 @@ class Grammar:
         newp.write(parser_content)
         newp.close()
 
+    def _attribute_encode(self, attr):
+        if attr:
+            if len(attr) == 2:
+                cls_name = attr[0].__name__
+                cls_args = attr[1]
+                return cls_name, cls_args
+            if isinstance(attr[0], int):
+                return attr[0]
+            elif isinstance(attr[0], type):
+                return attr[0].__name__
+            else:
+                raise Exception("Attribute Not Supported")
+        return None
+
+    def _attribute_apply(attribute, popped_syms, info):
+        ast_types = info
+        if attribute:
+            if len(attribute) == 1:
+                if isinstance(attribute[0], int):
+                    project_index = attribute[0]
+                    instance = popped_syms[project_index].content  # project up
+                elif isinstance(attribute[0], str):
+                    prod_class = attribute[0]
+                    arg = popped_syms[0].content
+                    instance = ast_types.__dict__[prod_class](arg)
+                else:
+                    raise Exception("Attribute Not Supported")
+            elif len(attribute) == 2:
+                prod_class, args_map = attribute
+                args = list(map(lambda i: popped_syms[i].content, args_map))
+                instance = ast_types.__dict__[prod_class](*args)
+            else:
+                raise Exception("Attribute Not Supported")
+        else:
+            instance = popped_syms[0].content  # project up
+        return instance
+
     def write_lr1_parser(self, path: str) -> None:
-        transition_sym_mapper: Callable[[LRitem], Any] = lambda it: [] if (ns := it.peek_nxt_symbol()) is None else [ns]
+        """
+        Generates an LR1 Shif-Reduce Parser for the Gramamr using attribute coder and attribute applier supplied or def
+        """
+        transition_sym_mapper: Callable[[LRitem], Any] = \
+            lambda it: [] if (ns := it.peek_nxt_symbol()) is None else [ns]
         state_maker: Callable[[Any], int | Any] = lambda subset: State(None, final=True, content=subset)
         goto_func = self._get_lr1_goto
         closure_func = self._get_lr1_closure
@@ -336,15 +380,9 @@ class Grammar:
                     else:
                         for symbol in item.lookaheads:
                             symbol: Symbol
-                            if prod.attribute:
-                                cls_name = prod.attribute[0] if isinstance(prod.attribute[0], str) or bool(
-                                    prod.attribute[0]) is False else prod.attribute[0].__name__
-                                cls_args = prod.attribute[1]
-                            else:
-                                cls_name = None
-                                cls_args = None
-                            right_part = list(map(repr, prod.right_part))
-                            reduce_info = ReduceInfo(str(prod.left_part), right_part, cls_name, cls_args)
+                            attribute = self._attribute_encode(prod.attribute)
+                            right_part_dbg = list(map(repr, prod.right_part))
+                            reduce_info = ReduceInfo(str(prod.left_part), right_part_dbg, attribute)
                             table.action((state.id, symbol.name), (LRtable.Action.REDUCE, reduce_info))
                 else:
                     symbol = item.peek_nxt_symbol()
@@ -355,7 +393,11 @@ class Grammar:
 
         serial_str = table.get_serial_str()
         parser_file = inspect.getfile(ReduceInfo)
-        parser_content = open(parser_file).read().replace("REPLACE-ME-PARSER", serial_str)
+        scaffold_cnt = open(parser_file).read()
+        attrib_src = inspect.getsource(Grammar._attribute_apply)
+        unindented = inspect.cleandoc(attrib_src).replace("\n","\n"+" "*4)
+        code = scaffold_cnt.replace("def _attribute_apply(attribute, popped_syms, info): pass", unindented)
+        parser_content = code.replace("REPLACE-ME-PARSER", serial_str)
         out_path = os.path.join(path, "parser.py")
         newp = open(out_path, "w")
         newp.write(parser_content)
