@@ -1,32 +1,39 @@
 import os.path
 
-from ast_regex import Group, PositiveSet, NegativeSet, Char, Alternation, Concatenation, KleeneStar, KleenePlus, Maybe, \
-    MixedRange, Range, EscapedOrShorthand, SingleCharName, MultiCharName, NamedGroup
+import ast_regex as ast
 from toolchain.frontend_generator import Grammar
 
 rx = Grammar()
 
-non_term = "Regex,ConcatenationRx,ClosureRx,AtomRx,GroupRx,PositiveSetRx,NegativeSetRx,EscapedOrShorthandRx,SetItemsRx,SetItemRx,CharRx,NameRx".split(
-    ",")
-Regex, ConcatenationRx, ClosureRx, AtomRx, GroupRx, PositiveSetRx, NegativeSetRx, EscapedOrShorthandRx, SetItemsRx, SetItemRx, CharRx, NameRx = \
-    rx.symbol_emit(*non_term)
+# Terminals
+# special symbols
+alt, star, plus, minus, ask, acc, esc, dot = \
+    rx.symbol_emit(*list(zip(*[iter(r"alt,|,star,*,plus,+,minus,-,ask,?,acc,^,esc,\,dot,.".split(","))] * 2)))
 
-term = list(
-    zip(*[iter(
-        r"alt,|,star,*,plus,+,minus,-,ask,?,acc,^,dot,.,esc,\,o_par,(,c_par,),o_bra,[,c_bra,],gt,>,lt,<,p,P".split(
-            ","))] * 2))
-alt, star, plus, minus, ask, acc, dot, esc, o_par, c_par, o_bra, c_bra, gt, lt, p = rx.symbol_emit(*term)
+# grouppers
+o_par, c_par, o_bra, c_bra, gt, lt, p = \
+    rx.symbol_emit(*list(zip(*[iter(r",o_par,(,c_par,),o_bra,[,c_bra,],gt,>,lt,<,p,P".split(","))] * 2)))
+
+# special one that will be recognized in ComplementDummy Matcher
 char_ = rx.symbol_emit(("char", "", ""))
+
+# Non Terminals
+Regex, ConcatenationRx, ClosureRx, AtomRx, GroupRx, PositiveSetRx, NegativeSetRx \
+    , EscapedOrShorthandRx, SetItemsRx, SetItemRx, CharRx, NameRx = \
+    rx.symbol_emit(*"Regex,ConcatenationRx,ClosureRx,AtomRx,GroupRx,PositiveSetRx,NegativeSetRx,"
+                    "EscapedOrShorthandRx,SetItemsRx,SetItemRx,CharRx,NameRx".split(","))
 
 rx.initial_symbol = Regex
 
-Regex > Regex + alt + ConcatenationRx / (Alternation, (0, 2)) | ConcatenationRx
+Regex > Regex + alt + ConcatenationRx / (ast.Alternation, (0, 2)) \
+| ConcatenationRx
 
-ConcatenationRx > ConcatenationRx + ClosureRx / (Concatenation, (0, 1)) | ClosureRx
+ConcatenationRx > ConcatenationRx + ClosureRx / (ast.Concatenation, (0, 1)) \
+| ClosureRx
 
-ClosureRx > AtomRx + star / (KleeneStar, (0,)) \
-| AtomRx + plus / (KleenePlus, (0,)) \
-| AtomRx + ask / (Maybe, (0,)) \
+ClosureRx > AtomRx + star / (ast.KleeneStar, (0,)) \
+| AtomRx + plus / (ast.KleenePlus, (0,)) \
+| AtomRx + ask / (ast.Maybe, (0,)) \
 | AtomRx
 
 AtomRx > GroupRx \
@@ -35,27 +42,28 @@ AtomRx > GroupRx \
 | EscapedOrShorthandRx \
 | CharRx
 
-GroupRx > o_par + Regex + c_par / (Group, (1,)) \
-| o_par + ask + p + lt + NameRx + gt + Regex + c_par / (NamedGroup,(4,6))
+GroupRx > o_par + Regex + c_par / (ast.Group, (1,)) \
+| o_par + ask + p + lt + NameRx + gt + Regex + c_par / (ast.NamedGroup, (4, 6))
 
-NameRx > char_ + NameRx / (MultiCharName,(0,1))  \
-| char_ / (SingleCharName, (0,))
+NameRx > char_ + NameRx / (ast.MultiCharName, (0, 1)) \
+| char_ / (ast.SingleCharName, (0,))
 
-PositiveSetRx > o_bra + SetItemsRx + c_bra / (PositiveSet, (1,))
+PositiveSetRx > o_bra + SetItemsRx + c_bra / (ast.PositiveSet, (1,))
 
-NegativeSetRx > o_bra + acc + SetItemsRx + c_bra / (NegativeSet, (2,))
+NegativeSetRx > o_bra + acc + SetItemsRx + c_bra / (ast.NegativeSet, (2,))
 
-SetItemsRx > SetItemsRx + SetItemRx / (MixedRange, (0, 1)) | SetItemRx / (MixedRange, (0, 0))
+SetItemsRx > SetItemsRx + SetItemRx / (ast.MixedRange, (0, 1)) \
+| SetItemRx / (ast.MixedRange, (0, 0))
 
-SetItemRx > char_ + minus + char_ / (Range, (0, 2)) \
+SetItemRx > char_ + minus + char_ / (ast.Range, (0, 2)) \
 | EscapedOrShorthandRx \
 | char_
 
-EscapedOrShorthandRx > esc + char_ / (EscapedOrShorthand, (1,)) \
-| dot / (EscapedOrShorthand, (0,))
+EscapedOrShorthandRx > esc + char_ / (ast.EscapedOrShorthand, (1,)) \
+| dot / (ast.EscapedOrShorthand, (0,))
 
-CharRx > char_ / (Char, (0,)) \
-| p / (Char, (0,))
+CharRx > char_ / (ast.Char, (0,)) \
+| p / (ast.Char, (0,))
 
 current_path = os.path.dirname(__file__)
 
