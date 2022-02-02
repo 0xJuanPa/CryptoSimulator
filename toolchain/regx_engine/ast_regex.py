@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from itertools import chain
 
 from toolchain.automaton import Automaton, State
+
 try:
     from .lexer import Token
 except ImportError:
@@ -84,8 +85,10 @@ class KleeneStar(UnaryAtom):
 class KleenePlus(UnaryAtom):
     def eval(self) -> Automaton:
         first: Automaton = self.first.eval()
-        res = first + first.lazy()
-        res = res.repeat()
+        first0 = first.get_copy()
+        first1 = first.get_copy()
+        res0 = first0 + first1.lazy()
+        res = res0.repeat()
         return res
 
 
@@ -145,17 +148,17 @@ class MixedRange(BinaryAtom):
     def eval(self) -> set:
         left = None
         right = None
-        if isinstance(self.first, Char):
-            left = [self.first.first.lexeme]
-        elif isinstance(self.first, EscapedOrShorthand):
-            content = self.first.first.first.lexeme
+        if isinstance(self.first, EscapedOrShorthand):
+            content = self.first.first.lexeme
             left = shorthand_resolver(content)
+        elif isinstance(self.first, Token):
+            left = [self.first.lexeme]
 
-        if isinstance(self.second, Char):
-            right = [self.second.first.lexeme]
-        elif isinstance(self.second, EscapedOrShorthand):
-            content = self.second.first.first.lexeme
+        if isinstance(self.second, EscapedOrShorthand):
+            content = self.second.first.lexeme
             right = shorthand_resolver(content)
+        elif isinstance(self.second, Token):
+            right = [self.second.lexeme]
 
         left = self.first.eval() if left is None else left
         right = self.second.eval() if right is None else right
@@ -165,8 +168,8 @@ class MixedRange(BinaryAtom):
 
 class Range(BinaryAtom):
     def eval(self) -> set:
-        left = self.first.first.lexeme
-        right = self.second.first.lexeme
+        left = self.first.lexeme
+        right = self.second.lexeme
         if ord(left) > ord(right):
             raise Exception("Does Not Support Inverted Classes")
         chars = [chr(x) for x in range(ord(left), ord(right) + 1)]

@@ -187,20 +187,11 @@ class Automaton:
         new_automaton = self.get_copy(prefix)
         copy_o = other.get_copy(prefix * 2)
         # concat automatons using epsilon transitions
-        content = set()
         for final in new_automaton.final_states:
             final[None] = copy_o.initial_state
             final.final = False
-            if final.content:
-                content.update(final.content)
-            final.content = None
         new_automaton.final_states.clear()
         new_automaton.add_state(*copy_o.states)
-        for final in new_automaton.final_states:
-            if final.content:
-                final.content.update(content)
-            else:
-                final.content = content
         return new_automaton
 
     def __or__(self, other: "Automaton") -> "Automaton":

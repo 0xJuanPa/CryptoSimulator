@@ -1,9 +1,10 @@
 from typing import Dict
 
 from toolchain.automaton import Automaton
+from . import ast_regex as ast
 from .lexer import Lexer, MatchProvider
 from .parser import Parser
-from . import ast_regex as ast
+
 
 class DummyComplementMatcher(MatchProvider):
     def __init__(self):
@@ -27,16 +28,13 @@ class RegxMatch:
     def __init__(self):
         self._groups = dict()
         self.lastgroup = None
-        self.match : str  =""
+        self.match: str = ""
 
     def __getitem__(self, item):
         return self._groups.get(item, None)
 
     def __setitem__(self, key, value):
-        if key in self._groups:
-            self._groups[key] += value
-        else:
-            self._groups[key] = value
+        self._groups[key] = value
         self.lastgroup = key
 
     def __repr__(self):
@@ -48,22 +46,30 @@ class RegxPattern:
     def __init__(self, compiled):
         self.compiled: Automaton = compiled
 
-    def match(self, input_str, pos=0) -> RegxMatch:
+    def match(self, input_str: str, pos=0) -> RegxMatch:
         match_ = RegxMatch()
-        curr_match = ""
         curr_state = self.compiled.initial_state
+        groups = dict()
         while pos < len(input_str):
             char = input_str[pos]
+            for m in curr_state.content:
+                m: str
+                stripped = m.strip("<>")
+                if m.startswith("<"):
+                    groups[stripped] = (pos,)
             if char not in curr_state.transitions:
                 break
             curr_state = curr_state[char]
-            curr_match += char
+            match_.match += char
             pos += 1
-            if curr_state.final:
-                match_.match += curr_match
-                if curr_state.content:
-                    match_[next(iter(curr_state.content))] = curr_match
-                curr_match = ""
+            if curr_state.content:
+                for m in curr_state.content:
+                    m: str
+                    stripped = m.strip("<>")
+                    if curr_state.final and m.endswith(">") and stripped in groups:
+                        init = groups[stripped][0]
+                        match_[stripped] = input_str[init:pos]
+                        # groups[stripped] += (pos,)
 
         return match_ if curr_state.final and pos == len(input_str) else None
 
