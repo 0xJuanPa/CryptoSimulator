@@ -67,7 +67,7 @@ class ParserSymbol:
 
 class Parser:
     def __init__(self, ast_types):
-        self.ast_types = ast_types
+        self.attributes_info = ast_types
         self.table: LRtable = LRtable.deserialize("""REPLACE-ME-PARSER""")
 
     def __call__(self, tokens: List[Any]):
@@ -94,7 +94,7 @@ class Parser:
                         assert symbol == popped_symbol  # this is useless because stack is always viable prefix but..
                         popped_syms.append(popped_symbol)
                     popped_syms = list(reversed(popped_syms))
-                    instance = _attribute_apply(content.attribute, popped_syms)
+                    instance = _attribute_apply(content.attribute, popped_syms,self.attributes_info)
                     new_sym = ParserSymbol(content.prod_left, instance)
                     symbol_stack.append(new_sym)
                     goto = self.table.goto((curr_state, content.prod_left))
