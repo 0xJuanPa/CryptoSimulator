@@ -50,7 +50,7 @@ class LRtable(Serializable):
         self._goto[key] = value
 
 
-ReduceInfo = namedtuple("ReduceInfo", ["prod_left", "prod_right", "prod_class", "prod_args"])
+ReduceInfo = namedtuple("ReduceInfo", ["prod_left", "prod_right", "attribute"])
 
 
 @dataclass
@@ -86,27 +86,25 @@ class Parser:
                     cursor += 1
                 case self.table.Action.REDUCE:
                     content: ReduceInfo
-                    popped_sym = []
+                    popped_syms = []
                     for symbol in list(reversed(content.prod_right)):
                         popped_symbol = symbol_stack.pop()
                         state_stack.pop()
                         curr_state = state_stack[-1]
                         assert symbol == popped_symbol  # this is useless because stack is always viable prefix but..
-                        popped_sym.append(popped_symbol)
-
-                    popped_sym = list(reversed(popped_sym))
-                    if content.prod_class and len(content.prod_args):
-                        args = list(map(lambda i: popped_sym[i].content, content.prod_args))
-                        instance = self.ast_types.__dict__[content.prod_class](*args)
-                    else:
-                        instance = popped_sym[0].content
-                    goto = self.table.goto((curr_state, content.prod_left))
-                    state_stack.append(goto)
+                        popped_syms.append(popped_symbol)
+                    popped_syms = list(reversed(popped_syms))
+                    instance = _attribute_apply(content.attribute, popped_syms)
                     new_sym = ParserSymbol(content.prod_left, instance)
                     symbol_stack.append(new_sym)
+                    goto = self.table.goto((curr_state, content.prod_left))
+                    state_stack.append(goto)
                 case self.table.Action.ACCEPT:
                     last_symbol = symbol_stack.pop()
                     assert last_symbol == self.table.initial_symbol  # just for fun
                     return last_symbol.content
                 case _:
                     raise ValueError(f"Invalid Syntax Unexpected Token {curr_tok}")
+
+
+def _attribute_apply(attribute, popped_syms, info): pass

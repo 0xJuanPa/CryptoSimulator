@@ -62,7 +62,7 @@ class LexerTable(list, Serializable):
 
 class Lexer:
     def __init__(self, match_provider: MatchProvider):
-        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~ns^=Uo6m0S<G~aiqlZ$fI8Tv|EpCj%=*H6-cjYj^ohJ_rwVMz|>|4CRop0{E?A#%B3;xP=7eFnsbuNJfZ}xMjVe9<lXM-#B2e(P82Ltb!}7Mj<-IJu@8}OHaAo0BX8Cw=N35QowBAIQF{cCrj5yp(Z_jm^{j)c`b3&}07idUTa7=2(7r6N7Sl5hS*4<VSldeULtB$(8Kb^z1NR+sn7L-7=oD~TgaQZ;FiifROu_m;-0wb=RO9)qpo?;~uG{yQWPLE#1jy~*>UJZhc+e$oK*o6w<cJ0$FqS_{O2={#^3wnSGCoV3ebkak00Dyn?E(M*K&&7JvBYQl0ssI200dcD""")
+        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~o34@Ld2v0S<JGJtYMVv4NdUoC0#OMXKVJ6-cjYj^ohJ_rwVMz|>|4CRop0{E?A#%B3;xP=7eFnsbuNJfZ}xMjVe9<lXM-#B2e(P82Ltb!}7Mj<-IJxKRJCrLna>eynXgNCo#?(4E|o_ZY{f^>&{Y9y1O6hlO<arPB%sYcTUHSZ~O@#GrQMz#Uy9bjV%s`=Mww!vlXtum9i?5Nf)L(uYC=cDy+jJ7WB_txFmb;{7ni$vPw$WkZvIy!=g1+_&4>*`qRHXaB@Q4gMf+wS&nse#`rgCAm3y;PU-5G!m9@h+(v!_~ac`VI2SfQeX*#PqX=c00E2w_yPa`IJvQqvBYQl0ssI200dcD""")
         self.matcher: MatchProvider = match_provider
         for t in self.table:
             if t[0] != self.table.eof_symbol:
