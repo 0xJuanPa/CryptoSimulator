@@ -12,7 +12,7 @@ alt, star, plus, minus, ask, acc, esc, dot = \
 
 # grouppers
 o_par, c_par, o_bra, c_bra, gt, lt, p = \
-    rx.symbol_emit(*list(zip(*[iter(r",o_par,(,c_par,),o_bra,[,c_bra,],gt,>,lt,<,p,P".split(","))] * 2)))
+    rx.symbol_emit(*list(zip(*[iter(r"o_par,(,c_par,),o_bra,[,c_bra,],gt,>,lt,<,p,P".split(","))] * 2)))
 
 # special one that will be recognized in ComplementDummy Matcher
 char_ = rx.symbol_emit(("char", "", ""))

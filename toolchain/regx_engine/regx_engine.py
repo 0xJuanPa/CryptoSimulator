@@ -49,28 +49,13 @@ class RegxPattern:
     def match(self, input_str: str, pos=0) -> RegxMatch:
         match_ = RegxMatch()
         curr_state = self.compiled.initial_state
-        groups = dict()
         while pos < len(input_str):
             char = input_str[pos]
-            for m in curr_state.content:
-                m: str
-                stripped = m.strip("<>")
-                if m.startswith("<"):
-                    groups[stripped] = (pos,)
             if char not in curr_state.transitions:
                 break
             curr_state = curr_state[char]
             match_.match += char
             pos += 1
-            if curr_state.content:
-                for m in curr_state.content:
-                    m: str
-                    stripped = m.strip("<>")
-                    if curr_state.final and m.endswith(">") and stripped in groups:
-                        init = groups[stripped][0]
-                        match_[stripped] = input_str[init:pos]
-                        # groups[stripped] += (pos,)
-
         return match_ if curr_state.final and pos == len(input_str) else None
 
 

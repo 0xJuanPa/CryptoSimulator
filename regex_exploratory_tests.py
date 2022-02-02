@@ -2,6 +2,7 @@ from typing import Dict
 
 from toolchain.regx_engine import RegxEngine, RegxPattern
 
+# this MatchProvider is a re matcher have to modify it cause capturing groups will not be implemented at the moment
 
 # class RegxMatcher(MatchProvider):
 #     def __init__(self):
@@ -19,7 +20,7 @@ from toolchain.regx_engine import RegxEngine, RegxPattern
 #             for name, matcher in self.matchers.items():
 #                 regex = matcher[0]
 #                 regex_str += ('|' if regex_str else "") + f"(?P<{name}>{regex})"
-#         self.compiled = RegxEngine.compile(regex_str)
+#         self.compiled = re.compile(regex_str)
 #
 #     def match(self, input_str, pos) -> tuple[str, str, str]:
 #         str_match = self.compiled.match(input_str, pos)
@@ -29,8 +30,8 @@ from toolchain.regx_engine import RegxEngine, RegxPattern
 #         return name, match, t_type
 
 
-rex: RegxPattern = RegxEngine.compile("(?P<mat>a+)|(?P<mat2>a|b)+")
+rex: RegxPattern = RegxEngine.compile("([^a-z])*")
 
-m = rex.match("abbbbb")
+m = rex.match("AAAAZZZ")
 
 print()
