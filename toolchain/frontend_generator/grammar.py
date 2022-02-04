@@ -343,7 +343,7 @@ class Grammar:
                     instance = popped_syms[project_index].content  # project up
                 elif isinstance(attribute[0], str):
                     prod_class = attribute[0]
-                    arg = popped_syms[0].content
+                    arg = popped_syms[0].content if len(popped_syms) else None
                     instance = ast_types.__dict__[prod_class](arg)
                 else:
                     raise Exception("Attribute Not Supported")
