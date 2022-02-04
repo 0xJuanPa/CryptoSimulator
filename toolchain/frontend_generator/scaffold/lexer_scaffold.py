@@ -81,14 +81,15 @@ class Lexer:
                 column = 0
             if current_char == self.table.spacer:
                 column += 1
-            name, match, t_type = self.matcher.match(input_str, pos)
+            name, match, skip = self.matcher.match(input_str, pos)
             if not match:
                 raise ValueError(f"Unexpected char '{current_char}' at line: {line} column: {column}")
-            current_token = Token(name, match, t_type, line, column)
+            current_token = Token(name, match, skip, line, column)
             match_len = len(match)
             pos += match_len
             column += match_len
-            tokens.append(current_token)
+            if not skip:
+                tokens.append(current_token)
 
         eof_token = Token(self.table.eof_symbol, self.table.eof_symbol, "", line, column)
         tokens.append(eof_token)
