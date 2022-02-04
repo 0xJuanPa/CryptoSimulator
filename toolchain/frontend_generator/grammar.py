@@ -23,7 +23,7 @@ class Symbol:
         return res
 
     def __or__(self, other) -> "DisyuntiveForm":
-        if isinstance(other, SentenceForm):
+        if isinstance(other, SentenceForm) or isinstance(other, AtrributedSentenceContainer):
             res = DisyuntiveForm([SentenceForm(self), other])
         elif isinstance(other, Symbol):
             res = DisyuntiveForm([SentenceForm(self), SentenceForm(other)])
@@ -166,7 +166,7 @@ class Production:
         self.attribute = attribute
 
     def __repr__(self):
-        res = f"{self.left_part} -> {self.right_part}" + (f"{{{self.attribute}}}" if self.attribute else "")
+        res = f"{self.left_part} -> {self.right_part}" + (f" {{{self.attribute}}}" if self.attribute else "")
         return res
 
     def __hash__(self):
@@ -252,12 +252,14 @@ class Grammar:
 
         def calc_firsts_of_sentence(sentence_form):
             calc = set()
-            for fsymbol in sentence_form:
-                sub_sentence = SentenceForm(fsymbol)
-                first_r = self._cached_firsts[sub_sentence]
-                calc.update(first_r)
-                if self.epsilon not in first_r:
+            for i, yi in enumerate(sentence_form):
+                sub_sentence = SentenceForm(yi)
+                first_yi = self._cached_firsts[sub_sentence]
+                calc.update(first_yi)
+                if self.epsilon not in first_yi:  # advance while epsilon in firsts
                     break
+                if i != len(sentence_form) - 1:
+                    calc.remove(self.epsilon)  # will get epsilon from the last or not get it
             return calc
 
         if self._cached_firsts is None:
@@ -308,7 +310,7 @@ class Grammar:
 
     def write_lexer(self, path) -> None:
         table = LexerTable(eof="$", linebreaker="\n", spacer=" ")
-        for t in self.terminals:
+        for t in filter(lambda s: not (isinstance(s, Epsilon) or isinstance(s, EOF)), self.terminals):
             table.append((t.name, t.match, t.type))
         serial_str = table.get_serial_str()
         lexer_file = inspect.getfile(LexerTable)
@@ -395,7 +397,7 @@ class Grammar:
         parser_file = inspect.getfile(ReduceInfo)
         scaffold_cnt = open(parser_file).read()
         attrib_src = inspect.getsource(Grammar._attribute_apply)
-        unindented = inspect.cleandoc(attrib_src).replace("\n","\n"+" "*4)
+        unindented = inspect.cleandoc(attrib_src).replace("\n", "\n" + " " * 4)
         code = scaffold_cnt.replace("def _attribute_apply(attribute, popped_syms, info): pass", unindented)
         parser_content = code.replace("REPLACE-ME-PARSER", serial_str)
         out_path = os.path.join(path, "parser.py")
