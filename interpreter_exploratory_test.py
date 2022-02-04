@@ -1,4 +1,10 @@
 from interpreter.interpreter import Interpreter
 
 interpreter =  Interpreter()
-interpreter.run("1 + 2")
+interpreter.run("""
+
+func hello (a,b,c,d) { 1+2*3; }
+
+
+
+""")

@@ -121,9 +121,10 @@ StatementList, Statement, Body = dsl.symbol_emit(*"StatementList,Statement,Body"
 If, While = dsl.symbol_emit(*"If,While".split(","))
 
 # Non Terminals for Expressions
-Expr, CmpExpr, ArithExpr, Term, Factor, Atom = dsl.symbol_emit(*"Expr,CmpExpr,ArithExpr,Term,Factor,Atom".split(","))
+Expr, ExpressionList, CmpExpr, ArithExpr, Term, Factor, Atom = dsl.symbol_emit(
+    *"Expr,ExpressionList,CmpExpr,ArithExpr,Term,Factor,Atom".split(","))
 
-FunDef, Fcall, ArgList = dsl.symbol_emit(*"FunDef,Fcall,Args".split(","))
+FunDef, ArgList = dsl.symbol_emit(*"FunDef,Args".split(","))
 
 # Non terminals for built-in dataStructures
 Map, MapElem, MapElems, Collection, CollElems = dsl.symbol_emit(*"Map,MapElem,MapElems,Collection,CollElems".split(","))
@@ -142,13 +143,15 @@ Ret = dsl.symbol_emit("Ret")
 dsl.initial_symbol = CryptoDsl
 
 # Initial Production Augmented Like
-CryptoDsl > TopLevelStList / (ast.Program,)
+# Tried to follow python philosophy of no epsilon productions but give up
 
-TopLevelStList > TopLevelStList + TopLevelSt \
-| TopLevelSt
+CryptoDsl > TopLevelStList
 
-TopLevelSt > FunDef + semicolon \
-| EntDec + semicolon
+TopLevelStList > TopLevelStList + TopLevelSt / (ast.TopLevelList,(0,1)) \
+| TopLevelSt / (ast.TopLevelList,)
+
+TopLevelSt > FunDef  \
+| EntDec
 
 Entkwgrp > traderkw | coinkw | eventkw  # spec keywords shorthand
 
@@ -159,16 +162,20 @@ Opts > o_brack + OptsList + c_brack / (1,)
 
 Behavior > Identifier + Body / (ast.Behavior, (0, 2))
 
-FunDef > Identifier + o_par + ArgList + c_par + Body / (ast.FunDef, (0, 2, 5))
+FunDef > funkw + Identifier + o_par + ArgList + c_par + Body / (ast.FunDef, (1, 3, 5))
 
 OptsList > OptsList + comma + Assign / (ast.OptList, (0, 2)) \
 | Assign / (ast.OptList,)
 
+ExpressionList > ExpressionList + comma + Expr / (ast.ExpresionList, (0, 2)) \
+| Expr / (ast.ExpresionList,)
+
 BehaviorList > BehaviorList + Behavior / (ast.BehaviorList, (0, 1)) \
 | Behavior / (ast.BehaviorList,)
 
-ArgList > ArgList + comma + identifier / (ast.ArgList, (0, 2)) \
-| identifier / (ast.ArgList,)
+ArgList > ArgList + comma + Identifier / (ast.ArgList, (0, 2)) \
+| Identifier / (ast.ArgList,) \
+| eps / (ast.ArgList,)
 
 StatementList > StatementList + Statement / (ast.StatementList, (0, 1)) \
 | Statement / (ast.StatementList,)
@@ -221,9 +228,7 @@ Factor > o_par + Expr + c_par / (1,) \
 Atom > Identifier \
 | string / (ast.String, (0,)) \
 | num / (ast.Number, (0,)) \
-| Fcall  # throw up
-
-Fcall > identifier + o_par + ArgList + c_par / (ast.Fcall, (0, 2))
+| Identifier + o_par + ExpressionList + c_par / (ast.Fcall, (0, 2))
 
 Identifier > identifier / (ast.Identifier, (0,))
 
