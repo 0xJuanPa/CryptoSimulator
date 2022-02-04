@@ -94,7 +94,7 @@ class Parser:
         state_stack = [self.table.initial_state]
         symbol_stack = []
         cursor = 0
-        while cursor < len(tokens):
+        while True:
             curr_tok = tokens[cursor]
             curr_state = state_stack[-1]
             action, content = self.table.action((curr_state, curr_tok))

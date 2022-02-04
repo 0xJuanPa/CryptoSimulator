@@ -327,9 +327,9 @@ class Grammar:
                 cls_args = attr[1]
                 return cls_name, cls_args
             if isinstance(attr[0], int):
-                return attr[0]
+                return (attr[0],)
             elif isinstance(attr[0], type):
-                return attr[0].__name__
+                return (attr[0].__name__,)
             else:
                 raise Exception("Attribute Not Supported")
         return None
@@ -354,7 +354,7 @@ class Grammar:
             else:
                 raise Exception("Attribute Not Supported")
         else:
-            instance = popped_syms[0].content  # project up
+            instance = popped_syms[0].content if len(popped_syms) else None  # project up
         return instance
 
     def write_lr1_parser(self, path: str) -> None:
@@ -368,7 +368,12 @@ class Grammar:
         closure_func = self._get_lr1_closure
         table = LRtable()
         table.initial_symbol = self.initial_symbol.name
-        self.augment()
+
+        # Augment Grammar Always
+        S0 = self.symbol_emit(f"{self.initial_symbol}'")
+        S0 > self.initial_symbol
+        self.initial_symbol = S0
+
         initial_value = [LRitem(next(iter(self.initial_symbol.associated_productions)), lookaheads=[self.eof])]
         dfa = Automaton.powerset_construct(initial_value, goto_func, closure_func, state_maker, transition_sym_mapper)
         table.initial_state = dfa.initial_state.id
@@ -383,7 +388,8 @@ class Grammar:
                         for symbol in item.lookaheads:
                             symbol: Symbol
                             attribute = self._attribute_encode(prod.attribute)
-                            right_part_dbg = list(map(repr, prod.right_part))
+                            right_part_dbg = list(map(repr, prod.right_part)) if prod.right_part[
+                                                                                     0] != self.epsilon else []
                             reduce_info = ReduceInfo(str(prod.left_part), right_part_dbg, attribute)
                             table.action((state.id, symbol.name), (LRtable.Action.REDUCE, reduce_info))
                 else:
@@ -404,14 +410,3 @@ class Grammar:
         newp = open(out_path, "w")
         newp.write(parser_content)
         newp.close()
-
-    @property
-    def is_augmented(self):
-        return len(self.initial_symbol.associated_productions) == 1
-
-    def augment(self):
-        if self.is_augmented:
-            return
-        S0 = self.symbol_emit(f"{self.initial_symbol}'")
-        S0 > self.initial_symbol
-        self.initial_symbol = S0
