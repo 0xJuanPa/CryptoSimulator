@@ -10,8 +10,9 @@ try:
 except ImportError:
     from lexer import Token
 
+INVALID = {"", ""}
 RESERVED = set(iter(".*+?()[]{}^\\<>"))
-ALPHABET = set(iter(string.printable)) - RESERVED
+ALPHABET = set(iter(string.printable)) - RESERVED - INVALID
 DIGITS = set(iter(string.digits))
 NONDIGIT = ALPHABET - DIGITS
 
@@ -108,7 +109,7 @@ class Group(UnaryAtom):
 class NamedGroup(BinaryAtom):
     def eval(self) -> Automaton:
         name = self.first.eval()
-        res : Automaton = self.second.eval()
+        res: Automaton = self.second.eval()
         for st in res.final_states:
             st.content = {name}
         return res
@@ -153,7 +154,7 @@ class EscapedOrShorthand(BinaryAtom):
 class MixedRange(BinaryAtom):
     def eval(self) -> set:
         proc = []
-        for part in (self.first,self.second):
+        for part in (self.first, self.second):
             cnt = None
             if isinstance(part, EscapedOrShorthand):
                 if part.first.lexeme == "\\":
@@ -180,7 +181,6 @@ class Range(BinaryAtom):
         chars = [chr(x) for x in range(ord(left), ord(right) + 1)]
         res = set(chars)
         return res
-
 
 
 class MultiCharName(BinaryAtom):
