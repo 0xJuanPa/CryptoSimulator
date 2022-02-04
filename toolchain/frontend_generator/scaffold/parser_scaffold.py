@@ -26,7 +26,7 @@ class Serializable:
 
 
 class LRtable(Serializable):
-    class Action(Enum):
+    class Action(Enum):  # inside the class couse weird behavior when deserialize and no time for investigating
         SHIFT = auto()
         REDUCE = auto()
         ACCEPT = auto()
@@ -48,6 +48,10 @@ class LRtable(Serializable):
         if value is None:
             return self._goto[key]
         self._goto[key] = value
+
+    def expect(self, state):
+        act = map(lambda x: x[1],filter(lambda x: x[0] == state, self._action.keys()))
+        return set(act)
 
 
 ReduceInfo = namedtuple("ReduceInfo", ["prod_left", "prod_right", "attribute"])
@@ -124,7 +128,8 @@ class Parser:
                     assert last_symbol == self.table.initial_symbol  # just for fun
                     return last_symbol.content
                 case _:
-                    raise ValueError(f"Invalid Syntax Unexpected Token {curr_tok}")
+                    expected = self.table.expect(curr_state)
+                    raise ValueError(f"Invalid Syntax Unexpected Token {curr_tok}, Expected: {expected}")
 
 
 def _attribute_apply(attribute, popped_syms, info): pass
