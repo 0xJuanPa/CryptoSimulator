@@ -1,6 +1,7 @@
 import os.path
 from enum import Enum, auto
 
+import ast_crypto as ast
 from toolchain.frontend_generator import Grammar
 
 
@@ -62,45 +63,48 @@ non_term = "".split(",")
 eps = dsl.epsilon
 
 # ignored terminals
-space, lbreak, tab, sl_comment = dsl.symbol_emit(("space", " "), ("lbreak", "\n|\r\n"), ("tab", "\t"),
-                                                 ("sl_comment", "#.*(\n|\r\n)"))
+space, lbreak, tab, sl_comment = dsl.symbol_emit(("space", " ", True), ("lbreak", "\n|\r\n", True), ("tab", "\t", True),
+                                                 ("sl_comment", "#.*(\n|\r\n)", True))
 
 # groups terminals
-o_par, c_par, o_brack, c_brack, o_brace, c_brace = dsl.symbol_emit(("o_par", "("), ("c_par", ")"), ("o_brack", "["),
-                                                                   ("c_brack", "]"), ("o_brace", "{"), ("c_brace", "}"))
+o_par, c_par, o_brack, c_brack, o_brace, c_brace = dsl.symbol_emit(("o_par", r"\("), ("c_par", r"\)"),
+                                                                   ("o_brack", r"\["),
+                                                                   ("c_brack", r"\]"), ("o_brace", r"\{"),
+                                                                   ("c_brace", r"\}"))
 
 # general pourpouse keyword terminals
-ifkw, elsekw, whilekw, funkw, retkw = dsl.symbol_emit(("if", "if"), ("else", "else"), ("while", "while"),
-                                                      ("func", "func"), ("ret", "ret"))
+ifkw, elsekw, whilekw, funkw, retkw = dsl.symbol_emit(("if", r"if"), ("else", r"else"), ("while", r"while"),
+                                                      ("func", r"func"), ("ret", r"ret"))
 # spec keywords terminals
-traderkw, coinkw, eventkw = dsl.symbol_emit(("trader", "trader"),
-                                            ("coin", "coin"), ("event", "event"))
+traderkw, coinkw, eventkw = dsl.symbol_emit(("trader", r"trader"),
+                                            ("coin", r"coin"), ("event", r"event"))
 
 # literals terminals
-identifier, string, num = dsl.symbol_emit(("identifier", r"[A-Za-z][\dA-Z_-a-z]*"), ("string", "'[^']*'"),
-                                          ("num", r"\d+|\d+[,.]\d+"))
+identifier, string, num = dsl.symbol_emit(("identifier", r"[A-Za-z][\dA-Z_a-z]*"), ("string", r"'[^']*'"),
+                                          ("num", r"\d+|\d+[,\.]\d+"))
 
-# operators terminals
-assign = dsl.symbol_emit(("assign", "="))
+# special terminals
+assign, semicolon = dsl.symbol_emit(("assign", r"="), ("semicolon", r";"))
 
 # unary operators terminals
-not_, neg = dsl.symbol_emit(("not", "!"), ("neg", "-"))
+not_ = dsl.symbol_emit(("not", r"!"))
 
 # binary operatos priority 0
-mul, div, fdiv, mod = dsl.symbol_emit(("mul", r"\*"), ("div", "/"), ("fdiv", "//"), ("mod", "%"))
+mul, div, fdiv, mod = dsl.symbol_emit(("mul", r"\*"), ("div", r"/"), ("fdiv", r"//"), ("mod", r"%"))
 
 # binary operatos priority 1
-plus, minus = dsl.symbol_emit(("plus", r"\+"), ("minus", "-"))
+plus, minus = dsl.symbol_emit(("plus", r"\+"), ("minus", r"\-"))
 
 # binary operatos priority 2
-or_, and_ = dsl.symbol_emit(("or", r"\|"), ("and", "&"))
+or_, and_ = dsl.symbol_emit(("or", r"\|"), ("and", r"&"))
 
 # binary operatos priority 3
-eq, neq, gt, geq, lt, leq = dsl.symbol_emit(("eq", "=="), ("neq", "!="), ("gt", ">"), ("geq", ">="), ("lt", "<"),
-                                            ("leq", "<="))
+eq, neq, gt, geq, lt, leq = dsl.symbol_emit(("eq", r"=="), ("neq", r"!="), ("gt", r"\>"), ("geq", r"\>="),
+                                            ("lt", r"\<"),
+                                            ("leq", r"\<="))
 
 # splitter terminals
-comma, dot, ddot = dsl.symbol_emit(("comma", ","), ("dot", "\."), ("ddot", ":"))
+comma, dot, ddot = dsl.symbol_emit(("comma", ","), ("dot", r"\."), ("ddot", ":"))
 
 # initial NonTerminal
 CryptoDsl = dsl.symbol_emit("CryptoDsl")
@@ -111,10 +115,10 @@ TopLevelStList, TopLevelSt, EntDec, Entkwgrp, Opts, OptsList, Behavior, Behavior
     *"TopLevelStList,TopLevelSt,EntDec,Entkwgrp,Opts,OptsList,Behavior,BehaviorList".split(","))
 
 # Non Terminals for Statements and Args
-StatementList, Statement = dsl.symbol_emit(*"StatementList,Statement".split(","))
+StatementList, Statement, Body = dsl.symbol_emit(*"StatementList,Statement,Body".split(","))
 
 # Non Terminals for Keywords
-If, Else, While = dsl.symbol_emit(*"If,Else,While".split(","))
+If, While = dsl.symbol_emit(*"If,While".split(","))
 
 # Non Terminals for Expressions
 Expr, CmpExpr, ArithExpr, Term, Factor, Atom = dsl.symbol_emit(*"Expr,CmpExpr,ArithExpr,Term,Factor,Atom".split(","))
@@ -127,6 +131,9 @@ Map, MapElem, MapElems, Collection, CollElems = dsl.symbol_emit(*"Map,MapElem,Ma
 # Declaration and Assignation Non Terminal
 Assign = dsl.symbol_emit(*"Assign".split(","))
 
+#
+Identifier = dsl.symbol_emit(*"Identifier".split(","))
+
 # Return Non Terminal
 Ret = dsl.symbol_emit("Ret")
 
@@ -135,107 +142,107 @@ Ret = dsl.symbol_emit("Ret")
 dsl.initial_symbol = CryptoDsl
 
 # Initial Production Augmented Like
-CryptoDsl > TopLevelStList
+CryptoDsl > TopLevelStList / (ast.Program,)
 
 TopLevelStList > TopLevelStList + TopLevelSt \
 | TopLevelSt
 
-TopLevelSt > FunDef + lbreak \
-| EntDec + lbreak
+TopLevelSt > FunDef + semicolon \
+| EntDec + semicolon
 
-Entkwgrp > traderkw | coinkw | eventkw
+Entkwgrp > traderkw | coinkw | eventkw  # spec keywords shorthand
 
-EntDec > Entkwgrp + identifier + ddot + identifier + Opts + o_brace + BehaviorList + c_brace \
-/ (ast.AgenDec, (0, 1, 3, 4, 6))
+EntDec > Entkwgrp + Identifier + ddot + Identifier + Opts + o_brace + BehaviorList + c_brace \
+/ (ast.AgentDec, (0, 1, 3, 4, 6))
 
-Opts > o_brack + OptsList + c_brack
+Opts > o_brack + OptsList + c_brack / (1,)
 
-OptsList > OptsList + comma + Assign \
-| Assign \
+Behavior > Identifier + Body / (ast.Behavior, (0, 2))
+
+FunDef > Identifier + o_par + ArgList + c_par + Body / (ast.FunDef, (0, 2, 5))
+
+OptsList > OptsList + comma + Assign / (ast.OptList, (0, 2)) \
+| Assign / (ast.OptList,)
 
 BehaviorList > BehaviorList + Behavior / (ast.BehaviorList, (0, 1)) \
-| Behavior / (ast.BehaviorList, (0,))
+| Behavior / (ast.BehaviorList,)
 
-Behavior > identifier + o_brace + StatementList + c_brace / (ast.Behavior, (0, 2))
+ArgList > ArgList + comma + identifier / (ast.ArgList, (0, 2)) \
+| identifier / (ast.ArgList,)
 
-FunDef > identifier + o_par + ArgList + c_par + o_brace + StatementList + c_brace / (ast.FuncDec, ())
+StatementList > StatementList + Statement / (ast.StatementList, (0, 1)) \
+| Statement / (ast.StatementList,)
 
-StatementList > StatementList + Statement \
-| Statement / (ast.StatementList())
-
-Statement > Expr + lbreak / ((0,),) \
+Statement > Expr + semicolon \
 | If \
 | While \
-| Assign + lbreak / ((0,),) \
-| Ret + lbreak / ((0,),)
+| Assign + semicolon \
+| Ret + semicolon
 
-If > ifkw + Expr + o_brace + StatementList + c_brace / (ast.If, (1, 3, 4)) \
-| If + Else / (ast.If, (1, 2))
+If > ifkw + Expr + Body / (ast.If, (1, 2)) \
+| ifkw + Expr + Body + elsekw + Body / (ast.If, (1, 2, 4))
 
-Else > elsekw + o_brace + StatementList + c_brace(ast.Else, (2, 0))
-
-While > whilekw + Expr + o_brace + StatementList + c_brace / (ast.While, (1, 3))
+While > whilekw + Expr + Body / (ast.While, (1, 3))
 
 Ret > retkw + Expr / (ast.Ret, (1,)) \
 | retkw / (ast.Ret,)
 
-Assign > identifier + assign + Expr / (ast.Assign, (0, 2)) \
-| identifier + assign + Map / (ast.Assign, (0, 2)) \
-| identifier + assign + Collection / (ast.Assign, (0, 2))
-
-ArgList > ArgList + comma + identifier / (ast.ArgList, (0, 2)) \
-| ArgList + comma + Assign / (ast.ArgList, (0, 2)) \
-| Assign / (ast.ArgList, (0,)) \
-| identifier / (ast.ArgList, (0,))
+Assign > identifier + assign + Expr / (ast.Assign, (0, 2))
+# | identifier + assign + Map / (ast.Assign, (0, 2)) \
+# | identifier + assign + Collection / (ast.Assign, (0, 2))
 
 # Expression Lang, dont have to elevate operands,parser already elevates them
 Expr > Expr + or_ + CmpExpr / (ast.And, (0, 2)) \
 | Expr + and_ + CmpExpr / (ast.Or, (0, 2)) \
-| CmpExpr
+| CmpExpr  # throw up
 
 CmpExpr > CmpExpr + eq + ArithExpr / (ast.Eq, (0, 2)) \
 | CmpExpr + neq + ArithExpr / (ast.Neq, (0, 2)) \
 | CmpExpr + gt + ArithExpr / (ast.Gt, (0, 2)) \
 | CmpExpr + geq + ArithExpr / (ast.Geq, (0, 2)) \
 | CmpExpr + leq + ArithExpr / (ast.Leq, (0, 2)) \
-| ArithExpr
+| ArithExpr  # throw up
 
 ArithExpr > ArithExpr + plus + Term / (ast.Sum, (0, 2)) \
-| ArithExpr + minus + Term(ast.Minus, (0, 2)) \
-| Term
+| ArithExpr + minus + Term / (ast.Sub, (0, 2)) \
+| Term  # throw up
 
 Term > Term + mul + Factor / (ast.Mul, (0, 2)) \
 | Term + div + Factor / (ast.Div, (0, 2)) \
 | Term + fdiv + Factor / (ast.Fdiv, (0, 2)) \
 | Term + mod + Factor / (ast.Mod, (0, 2)) \
-| Factor
+| Factor  # throw up
 
-Factor > o_par + Expr + c_par / ((1,),) \
-| neg + Atom / (ast.Not, (1,)) \
+Factor > o_par + Expr + c_par / (1,) \
+| minus + Atom / (ast.Neq, (1,)) \
 | not_ + Atom / (ast.Not, (1,)) \
-| Atom
+| Atom  # throw up
 
-Atom > identifier / (ast.Identifier, (0,)) \
+Atom > Identifier \
 | string / (ast.String, (0,)) \
-| num / (ast.Num, (0,)) \
-| Fcall
+| num / (ast.Number, (0,)) \
+| Fcall  # throw up
 
 Fcall > identifier + o_par + ArgList + c_par / (ast.Fcall, (0, 2))
 
-# Lang Data structures
-Collection > o_brace + CollElems + c_brace
+Identifier > identifier / (ast.Identifier, (0,))
 
-CollElems > CollElems + comma + Expr(ast.CollElems(0, 2)) \
-| Expr \
-| eps
+Body > o_brace + StatementList + c_brace / (1,)  # project first
 
-Map > o_brack + MapElems + c_brack
-
-MapElems > MapElems + comma + MapElem / (ast.MapElems, (0, 2)) \
-| MapElem \
-| eps
-
-MapElem > Expr + ddot + Expr / (ast.MapElem, (0, 2))
+# # Lang Data structures
+# Collection > o_brace + CollElems + c_brace / (1,)
+#
+# CollElems > CollElems + comma + Expr(ast.CollElems(0, 2)) \
+# | Expr \
+# | eps
+#
+# Map > o_brack + MapElems + c_brack / (1,)
+#
+# MapElems > MapElems + comma + MapElem / (ast.MapElems, (0, 2)) \
+# | MapElem \
+# | eps
+#
+# MapElem > Expr + ddot + Expr / (ast.MapElem, (0, 2))
 
 current_path = os.path.dirname(__file__)
 dsl.write_lr1_parser(current_path)  # python 3.9
