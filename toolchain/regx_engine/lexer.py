@@ -62,7 +62,7 @@ class LexerTable(list, Serializable):
 
 class Lexer:
     def __init__(self, match_provider: MatchProvider):
-        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~o34?_B^u0S<JGJtYMVv4NdUoC0#OMXKVJ6-cjYj^ohJ_rwVMz|>|4CRop0{E?A#%B3;xP=7eFnsbuNJfZ}xMjVe9<lXM-#B2e(P82Ltb!}7Mj<-IJxKRJCrLna>eynXgNCo#?(4E|o_ZY{f^>&{Y9y1O6hlO<arPB%sYcTUHSZ~O@#GrQN0J>^gQ-xo^)qX#*+^W8Z=8VF$(9wKk%IWo{eY@b|_F726jFZuCEMG{e7QF~FK)RnjckH26FXZ4G^C2Jf?E1l20p9|+QHT_kWpM1rh3QgUxcDvQx1S5MwvX4g{&_3@v48*oNrf~O4OAuO00D~v_yPa`fQht?vBYQl0ssI200dcD""")
+        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~nX-<6Qti0S<Fok|hNVv4NZ>be@vYabVR|_K9Ft`RM@&aM{L3v{P%Lr6>N6(KC~^TdHWGX*KY~N|8*Z@{FS~d2iD#(HqeuvADxO;WvTUDwQ>gPjnPfeHFMr@?Y4}z>%J1w+5Ca21xww#%AR&C+%#$j6xk2{CHNOa8v+0p3Y`bPcjqIfRsFRjI;TH#?Od76WfM4Rx`g(mC6a;16QN%t98**0bFN-wW6N%7f~HKS-^n7C^mDXSljjTd8DZPf(t&NGRS0a>h--Nw5rdyLLc#7^lCFfq9xt>YFs5XK(hb<^U6K`kUSD+00I92<^li!E1Y5KvBYQl0ssI200dcD""")
         self.matcher: MatchProvider = match_provider
         for t in self.table:
             if t[0] != self.table.eof_symbol:
@@ -81,14 +81,15 @@ class Lexer:
                 column = 0
             if current_char == self.table.spacer:
                 column += 1
-            name, match, t_type = self.matcher.match(input_str, pos)
+            name, match, skip = self.matcher.match(input_str, pos)
             if not match:
                 raise ValueError(f"Unexpected char '{current_char}' at line: {line} column: {column}")
-            current_token = Token(name, match, t_type, line, column)
+            current_token = Token(name, match, skip, line, column)
             match_len = len(match)
             pos += match_len
             column += match_len
-            tokens.append(current_token)
+            if not skip:
+                tokens.append(current_token)
 
         eof_token = Token(self.table.eof_symbol, self.table.eof_symbol, "", line, column)
         tokens.append(eof_token)

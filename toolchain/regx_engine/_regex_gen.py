@@ -4,7 +4,7 @@ import ast_regex as ast
 from toolchain.frontend_generator import Grammar
 
 rx = Grammar()
-
+# TODO implement TOKEN ENUMS FOR NAMES
 # Terminals
 # special symbols
 alt, star, plus, minus, ask, acc, esc, dot = \
@@ -23,7 +23,11 @@ Regex, ConcatenationRx, ClosureRx, AtomRx, GroupRx, PositiveSetRx, NegativeSetRx
     rx.symbol_emit(*"Regex,ConcatenationRx,ClosureRx,AtomRx,GroupRx,PositiveSetRx,NegativeSetRx,"
                     "EscapedOrShorthandRx,SetItemsRx,SetItemRx,CharRx,NameRx".split(","))
 
+ReservedSymbol = rx.symbol_emit("ReservedSymbol")
+
 rx.initial_symbol = Regex
+
+ReservedSymbol > alt | star | plus | minus | ask | acc | esc | dot | o_par | c_par | o_bra | c_bra | gt | lt
 
 Regex > Regex + alt + ConcatenationRx / (ast.Alternation, (0, 2)) \
 | ConcatenationRx
@@ -59,8 +63,9 @@ SetItemRx > char_ + minus + char_ / (ast.Range, (0, 2)) \
 | EscapedOrShorthandRx \
 | char_
 
-EscapedOrShorthandRx > esc + char_ / (ast.EscapedOrShorthand, (1,)) \
-| dot / (ast.EscapedOrShorthand, (0,))
+EscapedOrShorthandRx > esc + char_ / (ast.EscapedOrShorthand, (0,1)) \
+| esc + ReservedSymbol / (ast.EscapedOrShorthand, (0,1)) \
+| dot / (ast.EscapedOrShorthand, (0,0))
 
 CharRx > char_ / (ast.Char, (0,)) \
 | p / (ast.Char, (0,))

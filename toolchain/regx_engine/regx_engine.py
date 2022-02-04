@@ -46,17 +46,17 @@ class RegxPattern:
     def __init__(self, compiled):
         self.compiled: Automaton = compiled
 
-    def match(self, input_str: str, pos=0) -> RegxMatch:
-        match_ = RegxMatch()
+    def match(self, input_str: str, pos=0) -> str:
         curr_state = self.compiled.initial_state
+        match = ""
         while pos < len(input_str):
             char = input_str[pos]
             if char not in curr_state.transitions:
                 break
             curr_state = curr_state[char]
-            match_.match += char
+            match += char
             pos += 1
-        return match_ if curr_state.final and pos == len(input_str) else None
+        return match if curr_state.final else None
 
 
 class RegxEngine:

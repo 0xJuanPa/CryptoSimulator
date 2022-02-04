@@ -136,30 +136,35 @@ class Char(UnaryAtom):
         return res
 
 
-class EscapedOrShorthand(UnaryAtom):
+class EscapedOrShorthand(BinaryAtom):
     def eval(self) -> Automaton:
-        content = self.first.lexeme
-        alpha = shorthand_resolver(content)
+        if self.first.lexeme == "\\":
+            content = self.second.lexeme
+            alpha = shorthand_resolver(content)
+        else:
+            # special case escaped dot
+            alpha = {self.second.lexeme}
         res = multi_transition_simple_automata(alpha)
         return res
 
 
+### Cst like entities for better performance and less headaches
+
 class MixedRange(BinaryAtom):
     def eval(self) -> set:
-        left = None
-        right = None
-        if isinstance(self.first, EscapedOrShorthand):
-            content = self.first.first.lexeme
-            left = shorthand_resolver(content)
-        elif isinstance(self.first, Token):
-            left = [self.first.lexeme]
-
-        if isinstance(self.second, EscapedOrShorthand):
-            content = self.second.first.lexeme
-            right = shorthand_resolver(content)
-        elif isinstance(self.second, Token):
-            right = [self.second.lexeme]
-
+        proc = []
+        for part in (self.first,self.second):
+            cnt = None
+            if isinstance(part, EscapedOrShorthand):
+                if part.first.lexeme == "\\":
+                    content = part.second.lexeme
+                    cnt = shorthand_resolver(content)
+                else:
+                    cnt = {part.second.lexeme}
+            elif isinstance(part, Token):
+                cnt = {part.lexeme}
+            proc.append(cnt)
+        left, right = proc
         left = self.first.eval() if left is None else left
         right = self.second.eval() if right is None else right
         res = set(chain(left, right))
@@ -175,6 +180,7 @@ class Range(BinaryAtom):
         chars = [chr(x) for x in range(ord(left), ord(right) + 1)]
         res = set(chars)
         return res
+
 
 
 class MultiCharName(BinaryAtom):
