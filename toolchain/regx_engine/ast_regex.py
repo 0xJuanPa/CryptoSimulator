@@ -139,7 +139,7 @@ class Char(UnaryAtom):
 
 class EscapedOrShorthand(BinaryAtom):
     def eval(self) -> Automaton:
-        if self.first.lexeme == "\\":
+        if self.first.lexeme == "\\" and self.second.lexeme != ".":
             content = self.second.lexeme
             alpha = shorthand_resolver(content)
         else:
@@ -157,7 +157,7 @@ class MixedRange(BinaryAtom):
         for part in (self.first, self.second):
             cnt = None
             if isinstance(part, EscapedOrShorthand):
-                if part.first.lexeme == "\\":
+                if part.first.lexeme == "\\" and part.second.lexeme != ".":
                     content = part.second.lexeme
                     cnt = shorthand_resolver(content)
                 else:
