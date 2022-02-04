@@ -55,14 +55,34 @@ ReduceInfo = namedtuple("ReduceInfo", ["prod_left", "prod_right", "attribute"])
 
 @dataclass
 class ParserSymbol:
-    id: Any = id
+    id: Any
     content: Any = None
+    dbg_syms: Any = None
 
     def __eq__(self, other):
         if isinstance(other, str):
             pass
         res = self.id == other
         return res
+
+    def view(self):
+        import graphviz
+        import tempfile
+        graph = graphviz.Digraph("pt", format="svg")
+
+        def mkgrph(s: ParserSymbol):
+            graph.node(str(id(s)), label=str(s.id))
+            for chd in s.dbg_syms:
+                if chd.dbg_syms:
+                    graph.node(str(id(chd)), label=str(chd.id))
+                    graph.edge(str(id(s)), str(id(chd)))
+                    mkgrph(chd)
+                else:
+                    graph.node(str(id(chd)), label=repr(chd.content))
+                    graph.edge(str(id(s)), str(id(chd)))
+
+        mkgrph(self)
+        graph.unflatten().view(tempfile.mktemp(".gv"))
 
 
 class Parser:
@@ -94,8 +114,8 @@ class Parser:
                         assert symbol == popped_symbol  # this is useless because stack is always viable prefix but..
                         popped_syms.append(popped_symbol)
                     popped_syms = list(reversed(popped_syms))
-                    instance = _attribute_apply(content.attribute, popped_syms,self.attributes_info)
-                    new_sym = ParserSymbol(content.prod_left, instance)
+                    instance = _attribute_apply(content.attribute, popped_syms, self.attributes_info)
+                    new_sym = ParserSymbol(content.prod_left, instance, popped_syms)
                     symbol_stack.append(new_sym)
                     goto = self.table.goto((curr_state, content.prod_left))
                     state_stack.append(goto)
