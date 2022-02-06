@@ -1,4 +1,4 @@
-from abc import abstractmethod, ABC
+from abc import ABC
 from dataclasses import dataclass
 
 from toolchain.regx_engine.lexer import Token
@@ -33,112 +33,13 @@ class PList:
             self.elements.append(elem)
 
 
-class String(UnaryAtom):
-    pass
-
-
-class Number(UnaryAtom):
-    pass
-
-
-class Identifier(UnaryAtom):
-    pass
-
-
-class Fcall(BinaryAtom):
-    pass
-
-
-class If(BinaryAtom):
-    pass
-
-
-class While(BinaryAtom):
-    pass
-
-
-class Ret(UnaryAtom):
-    pass
-
-
-class FunDec(BinaryAtom):
-    pass
-
-
-class Assign(BinaryAtom):
-    pass
-
-
-class Eq(BinaryAtom):
-    pass
-
-
-class Neq(BinaryAtom):
-    pass
-
-
-class Gt(BinaryAtom):
-    pass
-
-
-class Geq(BinaryAtom):
-    pass
-
-
-class Lt(BinaryAtom):
-    pass
-
-
-class Leq(BinaryAtom):
-    pass
-
-
-class Sum(BinaryAtom):
-    pass
-
-
-class Sub(BinaryAtom):
-    pass
-
-
-class Mul(BinaryAtom):
-    pass
-
-
-class Div(BinaryAtom):
-    pass
-
-
-class Fdiv(BinaryAtom):
-    pass
-
-
-class Mod(BinaryAtom):
-    pass
-
-
-class And(BinaryAtom):
-    pass
-
-
-class Or(BinaryAtom):
-    pass
-
-
-class Not(UnaryAtom):
-    pass
-
-
-class Neg(UnaryAtom):
-    pass
-
-
 class OptList(PList):
     pass
 
 
 class TopLevelList(PList):
     pass
+
 
 class BehaviorList(PList):
     pass
@@ -151,19 +52,96 @@ class ArgList(PList):
 class StatementList(PList):
     pass
 
+
 class ExpresionList(PList):
     pass
 
 
-class AgentDec:
+## EXPRESSIONS
+
+class Expression:
     pass
 
 
-class Behavior:
+class BinaryExpresion(Expression, BinaryAtom):
+    pass
+
+
+class UnaryExpression(Expression, UnaryAtom):
+    pass
+
+
+class String(UnaryExpression):
+    pass
+
+
+class Number(UnaryExpression):
+    pass
+
+
+class Identifier(UnaryExpression):
+    pass
+
+
+class Fcall(Expression):
+    id: Identifier
+    Args: ArgList = None
+
+
+## OPERATORS
+
+class BinaryOp(BinaryExpresion):
+    pass
+
+
+class UnaryOp(UnaryExpression):
+    pass
+
+
+## TOP LEVEL STATEMENTS
+
+
+class TopLevelSt:
     pass
 
 @dataclass
-class FunDef:
-    id : Identifier
-    params : ArgList
-    Body : StatementList
+class AgentDec(TopLevelSt):
+    name : Identifier
+    subtype : Identifier
+    options : OptList
+    behavior_list: BehaviorList
+
+
+@dataclass
+class FunDef(TopLevelSt):
+    id: Identifier
+    params: ArgList
+    body: StatementList
+
+
+# STATEMENTS
+
+class Statement:
+    pass
+
+
+@dataclass
+class If(Statement):
+    condition: Expression
+    then_body: StatementList
+    else_body: StatementList = None
+
+
+@dataclass
+class While(Statement):
+    condition: Expression
+    body: StatementList
+
+
+class Assign(Statement):
+    id: Identifier
+    value: Expression
+
+
+class Ret(Statement):
+    value: Expression

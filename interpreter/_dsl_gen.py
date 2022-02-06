@@ -57,8 +57,6 @@ class TOKEN_TYPE(Enum):
 
 dsl = Grammar()
 
-non_term = "".split(",")
-
 # epsilon terminal
 eps = dsl.epsilon
 
@@ -111,14 +109,14 @@ CryptoDsl = dsl.symbol_emit("CryptoDsl")
 dsl.initial_symbol = CryptoDsl
 
 # Nonterminals for language specs
-TopLevelStList, TopLevelSt, EntDec, Entkwgrp, Opts, OptsList, Behavior, BehaviorList = dsl.symbol_emit(
-    *"TopLevelStList,TopLevelSt,EntDec,Entkwgrp,Opts,OptsList,Behavior,BehaviorList".split(","))
+TopLevelSt, TopLevelStList, EntDec, Entkwgrp, Opts, OptsList, Behavior, BehaviorList = dsl.symbol_emit(
+    *"TopLevelSt,TopLevelStList,EntDec,Entkwgrp,Opts,OptsList,Behavior,BehaviorList".split(","))
 
 # Non Terminals for Statements and Args
 StatementList, Statement, Body = dsl.symbol_emit(*"StatementList,Statement,Body".split(","))
 
 # Non Terminals for Keywords
-If, While = dsl.symbol_emit(*"If,While".split(","))
+If, While, Ret = dsl.symbol_emit(*"If,While,Ret".split(","))
 
 # Non Terminals for Expressions
 Expr, ExpressionList, CmpExpr, ArithExpr, Term, Factor, Atom = dsl.symbol_emit(
@@ -126,17 +124,14 @@ Expr, ExpressionList, CmpExpr, ArithExpr, Term, Factor, Atom = dsl.symbol_emit(
 
 FunDef, ArgList = dsl.symbol_emit(*"FunDef,Args".split(","))
 
-# Non terminals for built-in dataStructures
-Map, MapElem, MapElems, Collection, CollElems = dsl.symbol_emit(*"Map,MapElem,MapElems,Collection,CollElems".split(","))
-
 # Declaration and Assignation Non Terminal
 Assign = dsl.symbol_emit(*"Assign".split(","))
 
-#
 Identifier = dsl.symbol_emit(*"Identifier".split(","))
 
-# Return Non Terminal
-Ret = dsl.symbol_emit("Ret")
+# Shorthands for operators
+Op_prec0, Op_prec1, Op_prec2, Op_prec3, Op_prec4 = dsl.symbol_emit(
+    *"Op_prec0,Op_prec1,Op_prec2,Op_prec3,Op_prec4".split(","))
 
 # Production Rules BNF-Like Form
 
@@ -147,22 +142,23 @@ dsl.initial_symbol = CryptoDsl
 
 CryptoDsl > TopLevelStList
 
-TopLevelStList > TopLevelStList + TopLevelSt / (ast.TopLevelList,(0,1)) \
+TopLevelStList > TopLevelStList + TopLevelSt / (ast.TopLevelList, (0, 1)) \
 | TopLevelSt / (ast.TopLevelList,)
 
-TopLevelSt > FunDef  \
+TopLevelSt > FunDef \
 | EntDec
 
-Entkwgrp > traderkw | coinkw | eventkw  # spec keywords shorthand
+# spec keywords shorthand
+Entkwgrp > traderkw | coinkw | eventkw
 
 EntDec > Entkwgrp + Identifier + ddot + Identifier + Opts + o_brace + BehaviorList + c_brace \
 / (ast.AgentDec, (0, 1, 3, 4, 6))
 
 Opts > o_brack + OptsList + c_brack / (1,)
 
-Behavior > Identifier + Body / (ast.Behavior, (0, 2))
+Behavior > Identifier + Body / (ast.FunDef, (0, 1))
 
-FunDef > funkw + Identifier + o_par + ArgList + c_par + Body / (ast.FunDef, (1, 3, 5))
+FunDef > funkw + Identifier + o_par + ArgList + c_par + Body / (ast.FunDef, (1, 5, 3))
 
 OptsList > OptsList + comma + Assign / (ast.OptList, (0, 2)) \
 | Assign / (ast.OptList,)
@@ -186,6 +182,8 @@ Statement > Expr + semicolon \
 | Assign + semicolon \
 | Ret + semicolon
 
+Body > o_brace + StatementList + c_brace / (1,)  # project first
+
 If > ifkw + Expr + Body / (ast.If, (1, 2)) \
 | ifkw + Expr + Body + elsekw + Body / (ast.If, (1, 2, 4))
 
@@ -194,60 +192,39 @@ While > whilekw + Expr + Body / (ast.While, (1, 3))
 Ret > retkw + Expr / (ast.Ret, (1,)) \
 | retkw / (ast.Ret,)
 
-Assign > identifier + assign + Expr / (ast.Assign, (0, 2))
-# | identifier + assign + Map / (ast.Assign, (0, 2)) \
-# | identifier + assign + Collection / (ast.Assign, (0, 2))
+Assign > Identifier + assign + Expr / (ast.Assign, (0, 2))
 
 # Expression Lang, dont have to elevate operands,parser already elevates them
-Expr > Expr + or_ + CmpExpr / (ast.And, (0, 2)) \
-| Expr + and_ + CmpExpr / (ast.Or, (0, 2)) \
+# Shorthands for operator precedence
+Op_prec4 > or_ | and_
+Op_prec3 > eq | neq | gt | geq | lt | leq
+Op_prec2 > plus | minus
+Op_prec1 > mul | div | fdiv | mod
+Op_prec0 > minus | not_
+
+Expr > Expr + Op_prec4 + CmpExpr / (ast.BinaryOp, (0, 1, 2)) \
 | CmpExpr  # throw up
 
-CmpExpr > CmpExpr + eq + ArithExpr / (ast.Eq, (0, 2)) \
-| CmpExpr + neq + ArithExpr / (ast.Neq, (0, 2)) \
-| CmpExpr + gt + ArithExpr / (ast.Gt, (0, 2)) \
-| CmpExpr + geq + ArithExpr / (ast.Geq, (0, 2)) \
-| CmpExpr + leq + ArithExpr / (ast.Leq, (0, 2)) \
+CmpExpr > CmpExpr + Op_prec3 + ArithExpr / (ast.BinaryOp, (0, 1, 2)) \
 | ArithExpr  # throw up
 
-ArithExpr > ArithExpr + plus + Term / (ast.Sum, (0, 2)) \
-| ArithExpr + minus + Term / (ast.Sub, (0, 2)) \
+ArithExpr > ArithExpr + Op_prec2 + Term / (ast.BinaryOp, (0, 1, 2)) \
 | Term  # throw up
 
-Term > Term + mul + Factor / (ast.Mul, (0, 2)) \
-| Term + div + Factor / (ast.Div, (0, 2)) \
-| Term + fdiv + Factor / (ast.Fdiv, (0, 2)) \
-| Term + mod + Factor / (ast.Mod, (0, 2)) \
+Term > Term + Op_prec1 + Factor / (ast.BinaryOp, (0, 1, 2)) \
 | Factor  # throw up
 
 Factor > o_par + Expr + c_par / (1,) \
-| minus + Atom / (ast.Neq, (1,)) \
-| not_ + Atom / (ast.Not, (1,)) \
+| Op_prec0 + Atom / (ast.UnaryOp, (0, 1)) \
 | Atom  # throw up
 
 Atom > Identifier \
-| string / (ast.String, (0,)) \
-| num / (ast.Number, (0,)) \
+| string / (ast.String,) \
+| num / (ast.Number,) \
 | Identifier + o_par + ExpressionList + c_par / (ast.Fcall, (0, 2))
 
-Identifier > identifier / (ast.Identifier, (0,))
+Identifier > identifier / (ast.Identifier, )
 
-Body > o_brace + StatementList + c_brace / (1,)  # project first
-
-# # Lang Data structures
-# Collection > o_brace + CollElems + c_brace / (1,)
-#
-# CollElems > CollElems + comma + Expr(ast.CollElems(0, 2)) \
-# | Expr \
-# | eps
-#
-# Map > o_brack + MapElems + c_brack / (1,)
-#
-# MapElems > MapElems + comma + MapElem / (ast.MapElems, (0, 2)) \
-# | MapElem \
-# | eps
-#
-# MapElem > Expr + ddot + Expr / (ast.MapElem, (0, 2))
 
 current_path = os.path.dirname(__file__)
 dsl.write_lr1_parser(current_path)  # python 3.9
