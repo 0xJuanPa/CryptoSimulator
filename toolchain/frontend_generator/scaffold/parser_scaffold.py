@@ -78,7 +78,7 @@ class ParserSymbol:
             graph.node(str(id(s)), label=str(s.id))
             for chd in s.dbg_syms:
                 if chd.dbg_syms:
-                    graph.node(str(id(chd)), label=str(chd.id))
+                    graph.node(str(id(chd)), label=str(chd.name))
                     graph.edge(str(id(s)), str(id(chd)))
                     mkgrph(chd)
                 else:
@@ -105,7 +105,7 @@ class Parser:
             match action:
                 case self.table.Action.SHIFT:
                     state_stack.append(content)
-                    new_sym = ParserSymbol(curr_tok.id, curr_tok)
+                    new_sym = ParserSymbol(curr_tok.name, curr_tok)
                     symbol_stack.append(new_sym)
                     cursor += 1
                 case self.table.Action.REDUCE:

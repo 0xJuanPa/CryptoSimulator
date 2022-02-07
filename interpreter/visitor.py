@@ -12,12 +12,13 @@ def visitor(func):
         raise Exception("Arg Has to Be annotated")
     funcname = f"{func.__module__}.{func.__qualname__}"
     visitor.storage[(funcname, annotation)] = func
-    def wrapper(self, node):
+
+    def wrapper(self, node, *args, **kwargs):
         arg_type = type(node)
         mocked = visitor.storage[(funcname, arg_type)]
-        return mocked(self, node)
+        return mocked(self, node, *args, **kwargs)
 
     # accept method creation on the type
-    annotation[func.name]= wrapper
+    annotation[func.name] = wrapper
 
     return wrapper

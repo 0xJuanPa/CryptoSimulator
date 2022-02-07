@@ -395,9 +395,9 @@ class Grammar:
                 else:
                     symbol = item.peek_nxt_symbol()
                     if isinstance(symbol, Terminal):
-                        table.action((state.id, symbol.name), (LRtable.Action.SHIFT, state[symbol.name].id))
+                        table.action((state.id, symbol.name), (LRtable.Action.SHIFT, state[symbol.name].name))
                     else:
-                        table.goto((state.id, symbol.name), state[symbol.name].id)
+                        table.goto((state.id, symbol.name), state[symbol.name].name)
 
         serial_str = table.get_serial_str()
         parser_file = inspect.getfile(ReduceInfo)

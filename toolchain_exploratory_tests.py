@@ -66,7 +66,7 @@ g.write_lr1_parser(current_path)
 
 from lexer import Lexer
 from parser import Parser
-from interpreter.interpreter import RegxMatcher
+from interpreter.simulation_interpreter import RegxMatcher
 lexer = Lexer(RegxMatcher())
 ast = E
 ast.Elist = Elist

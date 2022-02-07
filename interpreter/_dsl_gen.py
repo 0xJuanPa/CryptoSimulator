@@ -4,57 +4,6 @@ from enum import Enum, auto
 import ast_crypto as ast
 from toolchain.frontend_generator import Grammar
 
-
-class TOKEN_TYPE(Enum):
-    # grouppers
-    O_PAR = auto()
-    C_PAR = auto()
-    O_BRACKETS = auto()
-    C_BRACKETS = auto()
-    O_BRACES = auto()
-    C_BRACES = auto()
-
-    # sepparators
-    LBREAK = auto()
-    SPACE = auto()
-    TAB = auto()
-    COMMENT = auto()
-
-    ASSIGN = auto()
-    DOT = auto()
-    PLUS = auto()
-    MINUS = auto()
-    MULT = auto()
-    DIV = auto()
-    FLOORDIV = auto()
-
-    AND = auto()
-    OR = auto()
-    GT = auto()
-    GE = auto()
-    LT = auto()
-    LE = auto()
-    EQ = auto()
-    NEQ = auto()
-
-    NOT = auto()
-    NEG = auto()
-
-    NONE = auto()
-    NUMBER = auto()
-    STRING = auto()
-    TRUE = auto()
-    FALSE = auto()
-    IDENTIFIER = auto()
-
-    # control statements
-    FOR = auto()
-    WHILE = auto()
-    IF = auto()
-    ELSE = auto()
-    RETURN = auto()
-
-
 dsl = Grammar()
 
 # epsilon terminal
@@ -221,7 +170,7 @@ Factor > o_par + Expr + c_par / (1,) \
 Atom > Identifier \
 | string / (ast.String,) \
 | num / (ast.Number,) \
-| Identifier + o_par + ExpressionList + c_par / (ast.Fcall, (0, 2))
+| Identifier + o_par + ExpressionList + c_par / (ast.FunCall, (0, 2))
 
 Identifier > identifier / (ast.Identifier, )
 

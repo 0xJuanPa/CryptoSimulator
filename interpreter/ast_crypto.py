@@ -1,7 +1,58 @@
 from abc import ABC
 from dataclasses import dataclass
+from enum import auto, Enum
 
 from toolchain.regx_engine.lexer import Token
+
+# will wait because enum issue
+class TOKEN_TYPE(Enum):
+    # grouppers
+    O_PAR = auto()
+    C_PAR = auto()
+    O_BRACKETS = auto()
+    C_BRACKETS = auto()
+    O_BRACES = auto()
+    C_BRACES = auto()
+
+    # sepparators
+    LBREAK = auto()
+    SPACE = auto()
+    TAB = auto()
+    COMMENT = auto()
+
+    ASSIGN = auto()
+    DOT = auto()
+    PLUS = auto()
+    MINUS = auto()
+    MULT = auto()
+    DIV = auto()
+    FLOORDIV = auto()
+
+    AND = auto()
+    OR = auto()
+    GT = auto()
+    GE = auto()
+    LT = auto()
+    LE = auto()
+    EQ = auto()
+    NEQ = auto()
+
+    NOT = auto()
+    NEG = auto()
+
+    NONE = auto()
+    NUMBER = auto()
+    STRING = auto()
+    TRUE = auto()
+    FALSE = auto()
+    IDENTIFIER = auto()
+
+    # control statements
+    FOR = auto()
+    WHILE = auto()
+    IF = auto()
+    ELSE = auto()
+    RETURN = auto()
 
 
 @dataclass
@@ -33,18 +84,6 @@ class PList:
             self.elements.append(elem)
 
 
-class OptList(PList):
-    pass
-
-
-class TopLevelList(PList):
-    pass
-
-
-class BehaviorList(PList):
-    pass
-
-
 class ArgList(PList):
     pass
 
@@ -63,60 +102,41 @@ class Expression:
     pass
 
 
-class BinaryExpresion(Expression, BinaryAtom):
-    pass
+class String(Expression):
+    def __init__(self, value):
+        val = value.lexeme if  isinstance(value, Token) else value
+        self.value = val
 
 
-class UnaryExpression(Expression, UnaryAtom):
-    pass
+class Number(Expression):
+    def __init__(self, value):
+        val: str = value.lexeme if isinstance(value, Token) else value
+        val2 = float(val.replace(",",".")) if "," in val or "." in val else int(value)
+        self.value = val2
 
 
-class String(UnaryExpression):
-    pass
+class Identifier(Expression):
+    def __init__(self,name):
+        self.name = name.lexeme
 
 
-class Number(UnaryExpression):
-    pass
-
-
-class Identifier(UnaryExpression):
-    pass
-
-
-class Fcall(Expression):
-    id: Identifier
-    Args: ArgList = None
+class FunCall(Expression):
+    name: Identifier
+    Args: ExpresionList = None
 
 
 ## OPERATORS
 
-class BinaryOp(BinaryExpresion):
-    pass
+class BinaryOp(Expression, BinaryAtom):
+    def __init__(self, x, y, op):
+        super.__init__(x, y)
+        self.op = op
 
 
-class UnaryOp(UnaryExpression):
-    pass
-
-
-## TOP LEVEL STATEMENTS
-
-
-class TopLevelSt:
-    pass
-
-@dataclass
-class AgentDec(TopLevelSt):
-    name : Identifier
-    subtype : Identifier
-    options : OptList
-    behavior_list: BehaviorList
-
-
-@dataclass
-class FunDef(TopLevelSt):
-    id: Identifier
-    params: ArgList
-    body: StatementList
+class UnaryOp(Expression, UnaryAtom):
+    def __init__(self, x, op):
+        super.__init__(x)
+        self.op = op
 
 
 # STATEMENTS
@@ -139,9 +159,56 @@ class While(Statement):
 
 
 class Assign(Statement):
-    id: Identifier
+    name: Identifier
     value: Expression
 
 
 class Ret(Statement):
     value: Expression
+
+
+## TOP LEVEL STATEMENTS
+
+
+class TopLevelSt:
+    pass
+
+
+@dataclass
+class AgentDec(TopLevelSt):
+    name: Identifier
+    type: Identifier
+    options: PList
+    behavior_list: PList
+
+
+@dataclass
+class FunDef(TopLevelSt):
+    name: Identifier
+    params: ArgList
+    body: StatementList
+
+
+class Simulation(Atom):
+    def __init__(self):
+        self.agents = None
+        self.funcs = None
+
+
+
+
+class Context(dict):
+    def __init__(self, parentctx=None):
+        super().__init__()
+        self.parentctx: Context = parentctx
+
+    def __contains__(self, item):
+        if str in self:
+            return True
+        elif self.parentctx is not None:
+            return str in self.parentctx
+        return False
+
+    def create_child_context(self):
+        ctx = Context(self)
+        return ctx

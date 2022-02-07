@@ -1,44 +1,30 @@
-class Coin:
-    def __init__(self):
-        self.miners
-        self.transactions
-        self.volatility
-        self.queue
-        self.number_of_coins
-        self.value
-        self.block_size
-
-    def validate(self):
-        pass
-
-
-class SamartContract:
-    def __init__(self):
-        pass
-
-
-class SocialEvents:
-    def __init__(self):
-        self.time_occured
-
-    def run(self):
-        pass
-
-
-class Trader:
-    def __init__(self):
-        self.wallet
+from interpreter import SimulationInterpreter
 
 
 class Simulation:
     def __init__(self):
-        self.coins
-        self.smart_contracts
-        self.traders
-        self.social_events
+        self.coins = list()
+        self.traders = list()
 
-    def load(self):
-        pass
+    def load(self, filepath):
+        simulation_file = open(filepath)
+        code = simulation_file.readlines()
+        simulation_file.close()
+        # TODO add built ins to scope
+        interpr = SimulationInterpreter()
+        self.coins,self.traders = interpr.interpret_simulation(code)
 
-    def initialize(self):
-        pass
+
+    def run(self, endTime):
+        current_time = 0
+
+        while current_time < endTime:
+            # to run simulation in traders mind it my have to be clonable or inmmutable
+            for trader in self.traders:
+                trader.trade(self.coins)
+
+            for coin in self.coins:
+                coin.validate()
+
+            for coin in self.coins:
+                coin.updateParameters()

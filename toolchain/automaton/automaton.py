@@ -64,12 +64,12 @@ class Automaton:
 
     def add_state(self, *to_Add):
         for st in to_Add:
-            if st.id is None:
-                st.id = self.counter
+            if st.name is None:
+                st.name = self.counter
                 self.counter += 1
             if st in self.states:
                 print('raise ValueError("Overriding State")')
-                st.id += self.counter
+                st.name += self.counter
                 self.counter += 1
                 self.add_state(st)
 
@@ -83,14 +83,14 @@ class Automaton:
         import graphviz
         import tempfile
         def repr_n(s):
-            res = str(s.id) + "\n" + ("\n".join(map(repr, s.content)) if s.content else "")
+            res = str(s.name) + "\n" + ("\n".join(map(repr, s.content)) if s.content else "")
             return res
 
         graph = graphviz.Digraph("fa", format="svg")
         graph.attr(rankdir="LR", outputMode="nodesfirst")
         graph.attr("node", shape="Mcircle")
         graph.node(repr_n(self.initial_state))
-        for src in sorted(self.states, key=lambda s: s.id):
+        for src in sorted(self.states, key=lambda s: s.name):
             src_rpr = repr_n(src)
             graph.attr("node", shape=("doublecircle" if src.final else "circle"))
             graph.node(src_rpr)
