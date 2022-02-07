@@ -9,6 +9,38 @@ update_parameters
 }
 
 
+coin Etherum : CoinGenericTemplate [initial_miners=10,initial_value=50]
+{
+update_parameters
+{
+1+2;
+}
+
+}
+
+
+coin Doge : CoinGenericTemplate [initial_miners=10,initial_value=50]
+{
+update_parameters
+{
+1+2;
+}
+
+}
+
+
+
+trader Greedy : TraderGenericTemplate [initial_miners=10,initial_value=50]
+{
+update_parameters
+{
+1+2;
+}
+
+}
+
+
+
 func sum(x, y) {
 
 ret x + y;

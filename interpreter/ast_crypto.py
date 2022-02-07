@@ -181,8 +181,8 @@ class TopLevelSt:
 
 @dataclass
 class AgentDec(TopLevelSt):
-    name: Identifier
     type: Token
+    name: Identifier
     subtype: Identifier
     options: PList
     behavior_list: PList
@@ -196,14 +196,20 @@ class FunDef(TopLevelSt):
 
 
 class Simulation(Atom):
-    def __init__(self,topLevel):
+    def __init__(self, top_level_sts):
         self.agents = []
         self.funcs = []
-        for top in topLevel.elements:
+        for top in top_level_sts.elements:
             if isinstance(top,FunDef):
                 self.funcs.append(top)
             else:
                 self.agents.append(top)
+
+
+
+class NativeFunc:
+    def __init__(self):
+        pass
 
 
 class Context(dict):
@@ -212,7 +218,7 @@ class Context(dict):
         self.parentctx: Context = parentctx
 
     def __contains__(self, item):
-        if str in self:
+        if super().__contains__(item):
             return True
         elif self.parentctx is not None:
             return str in self.parentctx

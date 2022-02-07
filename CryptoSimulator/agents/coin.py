@@ -1,10 +1,15 @@
 class CoinGenericTemplate:
-    def __init__(self,*,initial_miners,initial_value):
-        self.miners: int = 1
-        self.transactions: set = set()
-        self.queue: list = list()
-        self.value: int = 1
+    def __init__(self, name, *, initial_miners, initial_value):
+        self.name = name
+        self.miners: int = initial_miners
+        self.value: int = initial_value
         self.block_size: int = 1
+        self.queue: list = list()
+        self.transactions: set = set()
+
+    def __repr__(self):
+        res = f"{self.name} miners {self.miners} value {self.value}"
+        return res
 
     def validate(self):
         '''

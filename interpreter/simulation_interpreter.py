@@ -39,38 +39,43 @@ class RegxMatcher(MatchProvider):
 
 
 class SimulationInterpreter:
-    def __init__(self,built_ins,agent_templates):
-        self.built_ins : dict = built_ins
-        self.agent_templates : dict = agent_templates
+    def __init__(self, built_ins, agent_templates):
+        self.built_ins: dict = built_ins
+        self.agent_templates: dict = agent_templates
         self.lexer = Lexer(RegxMatcher())
         self.parser = Parser(ast)
-        self.static_checks = SemanticStaticChecker(built_ins.keys(),agent_templates)
-        # self.tree_interpreter = TreeInterpreter()
+        self.static_checks = SemanticStaticChecker(built_ins.keys(), agent_templates)
 
     def interpret_simulation(self, prog: str):
         '''
         returns a tuple of coin agents and traders agents with overrided behaviors
         '''
         tokens = self.lexer(prog)
-        simulation : ast.Simulation = self.parser(tokens)
-        self.static_checks.s_check(simulation)
+        simulation: ast.Simulation = self.parser(tokens)
+        self.static_checks(simulation)
 
         coins = []
         traders = []
 
-        for funcs in simulation.funcs:
-            # add to context
-            pass
+        ctx = ast.Context()
+        for func in simulation.funcs:
+            func: ast.FunDef
+            ctx[func.name.name] = func
+
+        tree_interpreter = TreeInterpreter(ctx)
 
         for agn in simulation.agents:
             agn: ast.AgentDec
-            templateclass = self.agent_templates[agn.type]
-            opts = self.tree_interpreter(agn.options)
-            instance = templateclass(agn.name,**opts)
+            templateclass = self.agent_templates[agn.subtype.name]
+            opts = tree_interpreter(agn.options)
+            instance = templateclass(agn.name.name, **opts)
 
             for behavior in agn.behavior_list.elements:
-                behavior : ast.FunDef
-                wrapped = self.tree_interpreter.wrap(behavior)
-                instance[behavior.name] = wrapped
-
-        return coins,traders
+                behavior: ast.FunDef
+                wrapped = tree_interpreter.wrap(behavior)
+                setattr(instance, behavior.name.name, wrapped)
+            if agn.type.lexeme == "coin":
+                coins.append(instance)
+            else:
+                traders.append(instance)
+        return coins, traders

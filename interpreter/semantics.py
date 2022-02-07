@@ -10,20 +10,23 @@ class SemanticStaticChecker:
         self.agents_subtypes: dict[str, tuple[set[str], set[str]]] = dict()
         for agentype, cls in agents_subtypes.items():
             options = inspect.signature(cls.__init__).parameters.values()
-            optionSet = set(map(lambda p: p.name, filter(lambda p: p.kind == inspect.Parameter.KEYWORD_ONLY, options)))
+            option_set = set(map(lambda p: p.name, filter(lambda p: p.kind == inspect.Parameter.KEYWORD_ONLY, options)))
             behaviors = inspect.getmembers(cls, lambda c: inspect.isfunction(c) and not c.__name__.startswith("_"))
-            behaviorsSet = set(map(lambda t: t[0], behaviors))
-            self.agents_subtypes[agentype] = (optionSet, behaviorsSet)
+            behaviors_set = set(map(lambda t: t[0], behaviors))
+            self.agents_subtypes[agentype] = (option_set, behaviors_set)
         self.global_ctx = Context()
         for built_in in self.built_ins:
             self.global_ctx[built_in] = None
 
+    def __call__(self, node):
+        self.s_check(node)
+
     @visitor
     def s_check(self, node: Simulation):
         for fun in node.funcs:
-            fun.s_check(self.global_ctx)
+            fun.s_check(self, self.global_ctx)
         for agent in node.agents:
-            agent.s_check(self.global_ctx)
+            agent.s_check(self, self.global_ctx)
 
     @visitor
     def s_check(self, node: ArgList, ctx: Context):
@@ -45,12 +48,12 @@ class SemanticStaticChecker:
     @visitor
     def s_check(self, node: StatementList, ctx: Context):
         for s in node.elements:
-            s.s_check(ctx)
+            s.s_check(self, ctx)
 
     @visitor
     def s_check(self, node: ExpresionList, ctx: Context):
         for s in node.elements:
-            s.s_check(ctx)
+            s.s_check(self, ctx)
 
     @visitor
     def s_check(self, node: AgentDec, ctx: Context):
@@ -63,11 +66,17 @@ class SemanticStaticChecker:
         if node.name in ctx:
             raise Exception("Agent Already Defined")
 
-        if node.subtype not in self.agents_subtypes:
+        if node.subtype.name not in self.agents_subtypes:
             raise Exception("Agent subtype not exists")
 
+        options = set()
         for opt in node.options.elements:
-            if opt not in self.agents_subtypes[node.type][0]:
+            opt: Assign
+            opt.value.s_check(self, ctx)
+            if opt.name.name in options:
+                raise Exception("Already asigned option")
+            options.add(opt.name.name)
+            if opt.name.name not in self.agents_subtypes[node.subtype.name][0]:
                 raise Exception("Agent subtype option not exists")
 
         defined = set()
@@ -75,12 +84,12 @@ class SemanticStaticChecker:
             beahvior: FunDef
             if beahvior.params:
                 raise Exception("Behaviors not allowed to have args")
-            if beahvior.name not in self.agents_subtypes[node.type][1]:
+            if beahvior.name.name not in self.agents_subtypes[node.subtype.name][1]:
                 raise Exception("Unknown Behavior Impemented")
-            if beahvior.name in defined:
+            if beahvior.name.name in defined:
                 raise Exception("Redefining defined behavior")
             defined.add(beahvior.name)
-            beahvior.s_check(ctx)
+            beahvior.s_check(self, ctx)
 
     @visitor
     def s_check(self, node: FunDef, ctx: Context):
@@ -88,9 +97,12 @@ class SemanticStaticChecker:
         No se admite sobrecarga
         No se pueden redefinir las funciones predefinidas.
         '''
-        if node.name in self.built_ins:
+        if node.name.name in self.built_ins:
             raise Exception("Invalid params, cant use built in param")
-        node.body.s_check(ctx.create_child_context())
+        child = ctx.create_child_context()
+        if node.params is not None:
+            node.params.s_check(self, child)
+        node.body.s_check(self, child)
 
     @visitor
     def s_check(self, node: Assign, ctx: Context):
@@ -99,25 +111,25 @@ class SemanticStaticChecker:
         '''
         if node.name in self.built_ins:
             raise Exception("Invalid params, cant use built in param")
-        node.value.s_check(ctx)
+        node.value.s_check(self, ctx)
 
     @visitor
     def s_check(self, node: If, ctx: Context):
         '''
          Checkeo del if
         '''
-        node.condition.s_check(ctx)
-        node.then_body.s_check(ctx.create_child_context())
+        node.condition.s_check(self, ctx)
+        node.then_body.s_check(self, ctx.create_child_context())
         if node.else_body is not None:
-            node.else_body.s_check(ctx.create_child_context())
+            node.else_body.s_check(self, ctx.create_child_context())
 
     @visitor
     def s_check(self, node: While, ctx: Context):
         '''
         Checkeo del while
         '''
-        node.condition.s_check(ctx)
-        node.body.s_check(ctx.create_child_context())
+        node.condition.s_check(self, ctx)
+        node.body.s_check(self, ctx.create_child_context())
 
     @visitor
     def s_check(self, node: Ret, ctx: Context):
@@ -125,28 +137,43 @@ class SemanticStaticChecker:
         Checkeo del ret
         '''
         if node.value is not None:
-            node.value.s_check(ctx)
+            node.value.s_check(self, ctx)
 
     @visitor
     def s_check(self, node: FunCall, ctx):
         '''
         # Toda función tiene que haber sido definida antes de ser usada
         '''
-        if node.name not in ctx:
-            raise Exception("Function not defined")
-        node.Args.s_check(ctx)
+
+        node.Args.s_check(self, ctx)
 
     @visitor
     def s_check(self, node: BinaryOp, ctx):
         '''
         # Binary Ops check
         '''
-        node.first.s_check(ctx)
-        node.second.s_check(ctx)
+        node.first.s_check(self, ctx)
+        node.second.s_check(self, ctx)
 
     @visitor
     def s_check(self, node: UnaryOp, ctx):
         '''
         # Binary Ops check
         '''
-        node.first.s_check(ctx)
+        node.first.s_check(self, ctx)
+
+    @visitor
+    def s_check(self, node: Identifier, ctx):
+        '''
+        # Identifier
+        '''
+        if node.name not in ctx:
+            raise Exception("Function not defined")
+
+    @visitor
+    def s_check(self, node: String, ctx):
+        pass
+
+    @visitor
+    def s_check(self, node: Number, ctx):
+        pass
