@@ -1,5 +1,5 @@
-from ast_crypto import *
-from visitor import *
+from .ast_crypto import *
+from .visitor import *
 
 
 class TreeInterpreter:

@@ -1,3 +1,6 @@
+import inspect
+from itertools import chain
+
 from interpreter import SimulationInterpreter
 
 
@@ -8,12 +11,26 @@ class Simulation:
 
     def load(self, filepath):
         simulation_file = open(filepath)
-        code = simulation_file.readlines()
+        code = simulation_file.read()
         simulation_file.close()
-        # TODO add built ins to scope
-        interpr = SimulationInterpreter()
-        self.coins,self.traders = interpr.interpret_simulation(code)
+        # TODO add builtins by reflection
+        from agents import coin as coins
+        from agents import trader as traders
+        agent_teplates = dict()
+        for name, clas in chain(coins.__dict__.items(), traders.__dict__.items()):
+            name: str
+            if not name.startswith("_"):
+                agent_teplates[name] = clas
 
+        from library_built_in import prob_distributions as prob
+        builtins = dict()
+
+        for name, func in chain(inspect.getmembers(prob,inspect.isfunction)):
+            if not name.startswith("_"):
+                builtins[name] = func
+
+        interpr = SimulationInterpreter(builtins, agent_teplates)
+        self.coins, self.traders = interpr.interpret_simulation(code)
 
     def run(self, endTime):
         current_time = 0
@@ -28,3 +45,8 @@ class Simulation:
 
             for coin in self.coins:
                 coin.updateParameters()
+
+
+if __name__ == "__main__":
+    s = Simulation()
+    s.load("./test1.sim")

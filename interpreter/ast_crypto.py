@@ -4,6 +4,7 @@ from enum import auto, Enum
 
 from toolchain.regx_engine.lexer import Token
 
+
 # will wait because enum issue
 class TOKEN_TYPE(Enum):
     # grouppers
@@ -96,6 +97,10 @@ class ExpresionList(PList):
     pass
 
 
+class OptList(PList):
+    pass
+
+
 ## EXPRESSIONS
 
 class Expression:
@@ -104,19 +109,19 @@ class Expression:
 
 class String(Expression):
     def __init__(self, value):
-        val = value.lexeme if  isinstance(value, Token) else value
+        val = value.lexeme if hasattr(value,"lexeme") else value #isinstance(value, Token)
         self.value = val
 
 
 class Number(Expression):
     def __init__(self, value):
-        val: str = value.lexeme if isinstance(value, Token) else value
-        val2 = float(val.replace(",",".")) if "," in val or "." in val else int(value)
+        val: str = value.lexeme if hasattr(value,"lexeme") else value  #isinstance(value, Token)
+        val2 = float(val.replace(",", ".")) if "," in val or "." in val else int(val)
         self.value = val2
 
 
 class Identifier(Expression):
-    def __init__(self,name):
+    def __init__(self, name):
         self.name = name.lexeme
 
 
@@ -129,7 +134,7 @@ class FunCall(Expression):
 
 class BinaryOp(Expression, BinaryAtom):
     def __init__(self, x, y, op):
-        super.__init__(x, y)
+        super().__init__(x, y)
         self.op = op
 
 
@@ -157,12 +162,12 @@ class While(Statement):
     condition: Expression
     body: StatementList
 
-
+@dataclass
 class Assign(Statement):
     name: Identifier
     value: Expression
 
-
+@dataclass
 class Ret(Statement):
     value: Expression
 
@@ -177,7 +182,8 @@ class TopLevelSt:
 @dataclass
 class AgentDec(TopLevelSt):
     name: Identifier
-    type: Identifier
+    type: Token
+    subtype: Identifier
     options: PList
     behavior_list: PList
 
@@ -185,16 +191,19 @@ class AgentDec(TopLevelSt):
 @dataclass
 class FunDef(TopLevelSt):
     name: Identifier
-    params: ArgList
     body: StatementList
+    params: ArgList = None
 
 
 class Simulation(Atom):
-    def __init__(self):
-        self.agents = None
-        self.funcs = None
-
-
+    def __init__(self,topLevel):
+        self.agents = []
+        self.funcs = []
+        for top in topLevel.elements:
+            if isinstance(top,FunDef):
+                self.funcs.append(top)
+            else:
+                self.agents.append(top)
 
 
 class Context(dict):

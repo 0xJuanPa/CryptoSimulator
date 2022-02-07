@@ -4,20 +4,20 @@ from typing import Dict, List, Set, Callable, FrozenSet, Any, Iterable
 
 
 class State:
-    def __init__(self, id=None, final: bool = False, content=None):
-        self.id = id
+    def __init__(self, name=None, final: bool = False, content=None):
+        self.name = name
         self.final: bool = final
         self.transitions: Dict[Any, State] | None = dict()
         self.epsilon_transitions: List[State] | None = list()
         self.content: Set | FrozenSet = content
 
     def get_copy(self, prefix) -> "State":
-        name = None if prefix is None else prefix + self.id
+        name = None if prefix is None else prefix + self.name
         res = State(name, self.final, self.content)
         return res
 
     def __repr__(self):
-        res = f"{self.id} c:{self.content}"
+        res = f"{self.name} c:{self.content}"
         return res
 
     def get_transition_symbols(self):
@@ -25,16 +25,16 @@ class State:
         return tuple(res)
 
     def __hash__(self):
-        return hash(id)  # hash idempotent on int
+        return hash(self.name)  # hash idempotent on int
 
     def __eq__(self, other: "State"):
-        return self.id == other.id
+        return self.name == other.name
 
     def __add__(self, other: "State"):
-        id_ = None  # int(str(self.id) + str(other.id))
+        name = None  # int(str(self.name) + str(other.name))
         content = self.content.__class__(
             chain(self.content, other.content)) if self.content and other.content else self.content or other.content
-        res = State(id_, self.final or other.final, content)
+        res = State(name, self.final or other.final, content)
         return res
 
     def __radd__(self, other: "State"):
@@ -179,7 +179,7 @@ class Automaton:
         return dfa
 
     def __repr__(self):
-        res = f"States {len(self.states)}, Finals {len(self.final_states)}, Initial {self.initial_state.id}"
+        res = f"States {len(self.states)}, Finals {len(self.final_states)}, Initial {self.initial_state.name}"
         return res
 
     def __add__(self, other: "Automaton") -> "Automaton":

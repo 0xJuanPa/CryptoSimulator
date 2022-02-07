@@ -1,21 +1,36 @@
-from ast_crypto import *
-from visitor import visitor
+import inspect
 
-
-
+from .ast_crypto import *
+from .visitor import visitor
 
 
 class SemanticStaticChecker:
     def __init__(self, built_ins, agents_subtypes: dict):
-        self.built_ins: set[str] = built_ins
-        self.agents_subtypes: dict[str, tuple[set[str], set[str]]] = agents_subtypes
+        self.built_ins: set[str] = set(built_ins)
+        self.agents_subtypes: dict[str, tuple[set[str], set[str]]] = dict()
+        for agentype, cls in agents_subtypes.items():
+            options = inspect.signature(cls.__init__).parameters.values()
+            optionSet = set(map(lambda p: p.name, filter(lambda p: p.kind == inspect.Parameter.KEYWORD_ONLY, options)))
+            behaviors = inspect.getmembers(cls, lambda c: inspect.isfunction(c) and not c.__name__.startswith("_"))
+            behaviorsSet = set(map(lambda t: t[0], behaviors))
+            self.agents_subtypes[agentype] = (optionSet, behaviorsSet)
+        self.global_ctx = Context()
+        for built_in in self.built_ins:
+            self.global_ctx[built_in] = None
+
+    @visitor
+    def s_check(self, node: Simulation):
+        for fun in node.funcs:
+            fun.s_check(self.global_ctx)
+        for agent in node.agents:
+            agent.s_check(self.global_ctx)
 
     @visitor
     def s_check(self, node: ArgList, ctx: Context):
         '''
         # Todos los argumentos definidos en una misma función tienen que ser diferentes entre sí
         Aunque pueden ser iguales a variables definidas globalmente
-        # En el cuerpo de una función, los nombres de los argumentos ocultan los nombres de variables iguales.
+        # En el cuerpo de una función, los nombres de los argumentos no ocultan los nombres de variables iguales.
         '''
         names = set()
         for arg in node.elements:
@@ -48,7 +63,7 @@ class SemanticStaticChecker:
         if node.name in ctx:
             raise Exception("Agent Already Defined")
 
-        if node.type not in self.agents_subtypes:
+        if node.subtype not in self.agents_subtypes:
             raise Exception("Agent subtype not exists")
 
         for opt in node.options.elements:

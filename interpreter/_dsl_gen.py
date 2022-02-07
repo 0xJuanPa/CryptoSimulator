@@ -1,5 +1,4 @@
 import os.path
-from enum import Enum, auto
 
 import ast_crypto as ast
 from toolchain.frontend_generator import Grammar
@@ -23,12 +22,11 @@ o_par, c_par, o_brack, c_brack, o_brace, c_brace = dsl.symbol_emit(("o_par", r"\
 ifkw, elsekw, whilekw, funkw, retkw = dsl.symbol_emit(("if", r"if"), ("else", r"else"), ("while", r"while"),
                                                       ("func", r"func"), ("ret", r"ret"))
 # spec keywords terminals
-traderkw, coinkw, eventkw = dsl.symbol_emit(("trader", r"trader"),
-                                            ("coin", r"coin"), ("event", r"event"))
+traderkw, coinkw = dsl.symbol_emit(("trader", r"trader"), ("coin", r"coin"))
 
 # literals terminals
 identifier, string, num = dsl.symbol_emit(("identifier", r"[A-Za-z][\dA-Z_a-z]*"), ("string", r"'[^']*'"),
-                                          ("num", r"\d+|\d+[,\.]\d+"))
+                                          ("num", r"\d+|\d+[\.]\d+"))
 
 # special terminals
 assign, semicolon = dsl.symbol_emit(("assign", r"="), ("semicolon", r";"))
@@ -51,7 +49,7 @@ eq, neq, gt, geq, lt, leq = dsl.symbol_emit(("eq", r"=="), ("neq", r"!="), ("gt"
                                             ("leq", r"\<="))
 
 # splitter terminals
-comma, dot, ddot = dsl.symbol_emit(("comma", ","), ("dot", r"\."), ("ddot", ":"))
+comma, dot, ddot = dsl.symbol_emit(("comma", r"\,"), ("dot", r"\."), ("ddot", ":"))
 
 # initial NonTerminal
 CryptoDsl = dsl.symbol_emit("CryptoDsl")
@@ -89,16 +87,16 @@ dsl.initial_symbol = CryptoDsl
 # Initial Production Augmented Like
 # Tried to follow python philosophy of no epsilon productions but give up
 
-CryptoDsl > TopLevelStList
+CryptoDsl > TopLevelStList / (ast.Simulation,)
 
-TopLevelStList > TopLevelStList + TopLevelSt / (ast.TopLevelList, (0, 1)) \
-| TopLevelSt / (ast.TopLevelList,)
+TopLevelStList > TopLevelStList + TopLevelSt / (ast.PList, (0, 1)) \
+| TopLevelSt / (ast.PList,)
 
 TopLevelSt > FunDef \
 | EntDec
 
 # spec keywords shorthand
-Entkwgrp > traderkw | coinkw | eventkw
+Entkwgrp > traderkw | coinkw
 
 EntDec > Entkwgrp + Identifier + ddot + Identifier + Opts + o_brace + BehaviorList + c_brace \
 / (ast.AgentDec, (0, 1, 3, 4, 6))
@@ -115,8 +113,8 @@ OptsList > OptsList + comma + Assign / (ast.OptList, (0, 2)) \
 ExpressionList > ExpressionList + comma + Expr / (ast.ExpresionList, (0, 2)) \
 | Expr / (ast.ExpresionList,)
 
-BehaviorList > BehaviorList + Behavior / (ast.BehaviorList, (0, 1)) \
-| Behavior / (ast.BehaviorList,)
+BehaviorList > BehaviorList + Behavior / (ast.PList, (0, 1)) \
+| Behavior / (ast.PList,)
 
 ArgList > ArgList + comma + Identifier / (ast.ArgList, (0, 2)) \
 | Identifier / (ast.ArgList,) \
@@ -151,20 +149,20 @@ Op_prec2 > plus | minus
 Op_prec1 > mul | div | fdiv | mod
 Op_prec0 > minus | not_
 
-Expr > Expr + Op_prec4 + CmpExpr / (ast.BinaryOp, (0, 1, 2)) \
+Expr > Expr + Op_prec4 + CmpExpr / (ast.BinaryOp, (0, 2, 1)) \
 | CmpExpr  # throw up
 
-CmpExpr > CmpExpr + Op_prec3 + ArithExpr / (ast.BinaryOp, (0, 1, 2)) \
+CmpExpr > CmpExpr + Op_prec3 + ArithExpr / (ast.BinaryOp, (0, 2, 1)) \
 | ArithExpr  # throw up
 
-ArithExpr > ArithExpr + Op_prec2 + Term / (ast.BinaryOp, (0, 1, 2)) \
+ArithExpr > ArithExpr + Op_prec2 + Term / (ast.BinaryOp, (0, 2, 1)) \
 | Term  # throw up
 
-Term > Term + Op_prec1 + Factor / (ast.BinaryOp, (0, 1, 2)) \
+Term > Term + Op_prec1 + Factor / (ast.BinaryOp, (0, 2, 1)) \
 | Factor  # throw up
 
 Factor > o_par + Expr + c_par / (1,) \
-| Op_prec0 + Atom / (ast.UnaryOp, (0, 1)) \
+| Op_prec0 + Atom / (ast.UnaryOp, (1,0)) \
 | Atom  # throw up
 
 Atom > Identifier \
@@ -172,9 +170,8 @@ Atom > Identifier \
 | num / (ast.Number,) \
 | Identifier + o_par + ExpressionList + c_par / (ast.FunCall, (0, 2))
 
-Identifier > identifier / (ast.Identifier, )
+Identifier > identifier / (ast.Identifier,)
 
-
-current_path = os.path.dirname(__file__)
-dsl.write_lr1_parser(current_path)  # python 3.9
+current_path = os.path.dirname(__file__)  # python 3.9
+dsl.write_lr1_parser(current_path)
 dsl.write_lexer(current_path)

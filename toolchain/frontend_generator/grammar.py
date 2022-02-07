@@ -376,14 +376,14 @@ class Grammar:
 
         initial_value = [LRitem(next(iter(self.initial_symbol.associated_productions)), lookaheads=[self.eof])]
         dfa = Automaton.powerset_construct(initial_value, goto_func, closure_func, state_maker, transition_sym_mapper)
-        table.initial_state = dfa.initial_state.id
+        table.initial_state = dfa.initial_state.name
         for state in dfa.states:
             items: Iterable[LRitem] = state.content
             for item in items:
                 if item.is_reduce:
                     prod = item.production
                     if prod.left_part == self.initial_symbol:
-                        table.action((state.id, self.eof), (LRtable.Action.ACCEPT, 0))
+                        table.action((state.name, self.eof), (LRtable.Action.ACCEPT, 0))
                     else:
                         for symbol in item.lookaheads:
                             symbol: Symbol
@@ -391,13 +391,13 @@ class Grammar:
                             right_part_dbg = list(map(repr, prod.right_part)) if prod.right_part[
                                                                                      0] != self.epsilon else []
                             reduce_info = ReduceInfo(str(prod.left_part), right_part_dbg, attribute)
-                            table.action((state.id, symbol.name), (LRtable.Action.REDUCE, reduce_info))
+                            table.action((state.name, symbol.name), (LRtable.Action.REDUCE, reduce_info))
                 else:
                     symbol = item.peek_nxt_symbol()
                     if isinstance(symbol, Terminal):
-                        table.action((state.id, symbol.name), (LRtable.Action.SHIFT, state[symbol.name].name))
+                        table.action((state.name, symbol.name), (LRtable.Action.SHIFT, state[symbol.name].name))
                     else:
-                        table.goto((state.id, symbol.name), state[symbol.name].name)
+                        table.goto((state.name, symbol.name), state[symbol.name].name)
 
         serial_str = table.get_serial_str()
         parser_file = inspect.getfile(ReduceInfo)

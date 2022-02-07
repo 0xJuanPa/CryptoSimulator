@@ -1,4 +1,4 @@
-class TraderTemplate:
+class TraderGenericTemplate:
 
     def __init__(self):
         self.wallet : dict[str,int] = dict()

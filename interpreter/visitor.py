@@ -19,6 +19,6 @@ def visitor(func):
         return mocked(self, node, *args, **kwargs)
 
     # accept method creation on the type
-    annotation[func.name] = wrapper
+    setattr(annotation,func.__name__,wrapper)
 
     return wrapper

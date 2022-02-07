@@ -1,5 +1,5 @@
 class CoinGenericTemplate:
-    def __init__(self):
+    def __init__(self,*,initial_miners,initial_value):
         self.miners: int = 1
         self.transactions: set = set()
         self.queue: list = list()

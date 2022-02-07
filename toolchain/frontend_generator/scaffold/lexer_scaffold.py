@@ -25,17 +25,17 @@ class Serializable:
 
 @dataclass
 class Token:
-    id: str
+    name: str
     lexeme: str
     type: str
     line: int
     column: int
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self.name)
 
     def __eq__(self, other):
-        return self.id == other
+        return self.name == other
 
 
 class MatchProvider(ABC):

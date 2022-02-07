@@ -40,12 +40,12 @@ class RegxMatcher(MatchProvider):
 
 class SimulationInterpreter:
     def __init__(self,built_ins,agent_templates):
-        self.built_ins = built_ins
-        self.agent_templates = agent_templates
+        self.built_ins : dict = built_ins
+        self.agent_templates : dict = agent_templates
         self.lexer = Lexer(RegxMatcher())
         self.parser = Parser(ast)
-        self.static_checks = SemanticStaticChecker(built_ins,agent_templates)
-        self.tree_interpreter = TreeInterpreter()
+        self.static_checks = SemanticStaticChecker(built_ins.keys(),agent_templates)
+        # self.tree_interpreter = TreeInterpreter()
 
     def interpret_simulation(self, prog: str):
         '''

@@ -1,1 +1,1 @@
-from simulation_interpreter import SimulationInterpreter
+from .simulation_interpreter import SimulationInterpreter

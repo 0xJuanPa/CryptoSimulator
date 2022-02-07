@@ -25,17 +25,17 @@ class Serializable:
 
 @dataclass
 class Token:
-    id: str
+    name: str
     lexeme: str
     type: str
     line: int
     column: int
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self.name)
 
     def __eq__(self, other):
-        return self.id == other
+        return self.name == other
 
 
 class MatchProvider(ABC):
@@ -62,7 +62,7 @@ class LexerTable(list, Serializable):
 
 class Lexer:
     def __init__(self, match_provider: MatchProvider):
-        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~$u^(_H{S0S;}?5IlR8zf}42j23Z9<ueiEL^PQ9oN}j97t<i*Ct^@+x9Cp5#p2z<dIyLolH@nK9r}in$1<}XeugbL7$ictQ&%N2@g7IXaA~0T6%4RgvA-BY^N!mhtNPG?S=Jxk{RI0q`cv|HfHERzwQ`J||AfQx@2p#?o0we3OY^jKCbEKO#+Bb{1mq^E>SJ2?N|C3@xEjFPZ;cht!u8;^UCdQNT!%tEERTTUB;_pYLN%S)3i0rr`DR^`gnG>eoLo-V(OX1vi`Jmkr9+uq`_$wyC@4pgSKmgzmc1>SngqY!C>w%Db-)$JBA)rEMo-UHIkx~ZGXdD42aDgXOrsX&?6c4H=P;JN<(t75dhZ|DrGD;}d@<Lc(NZits_aG4z$)c+JV<N0wp7n4lWQ_G2KMOy$cd*wRGO#X7ou1~=){m`pB7kw|BC>=`*!<0%XV#Afm^(aa~3K<hhfqr^VnV(*wnllNKBj`YUxSM{>S5cvILQH+`GxE*XTMD2XP-()05u>y+osfiqb!tJ*n9W!MVB&yy&in(rV*}iQwCTjkmLY$~6FDZ%D1eV(J`Y2uSEe?@hz5(0Y26s*Ek+cqze>#IOJWlaqB7P}B2P00Hj<l?DI+erojXvBYQl0ssI200dcD""")
+        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~$H%%3T0J0S<lHNxo^NL+1f`PJ1i=m2B}G?Aif<6YLCIlYwC*d#Q)jc6mMG(^);Rz;WT)BBLGg6phpbYpt<0)y4tMEJ2XcW~$QN4WrhYFO6f2K^hENr~@}$RugPy88n2f?JF&rUbxv(3T)xi#7!LSXczt9pk6*W9JH#~4uJX@(WAC2f3k6mN(_cp@NvR!DOnYBZUeBA942C|y3ac?;Oq9IitX{~;Eh*I)=^&YkFiWBQyrcd1iGJ*f}Qyp$NX+Lviin%BS+I2r%h#yD#lP$0v|$gYW3WIq5e><-Nq&Tr;X$xDL1VV&aV(-SvIq;!il=nk5$Rjrp<wJU)k!WmG+{T{%?O}UA!(WwTZpe_g*tOVDV*D?QJl|5kiY-OadocP(dGfFlSuW;}pfe*7)C`mt7mPVTDL$y-~IJlH1ZxQitEw*#|TpqY#uGDPkImuf1v(RD%Y?wVLixFbMb~v>HMd>gdkmZ#d#jLj4RZqYn4}7@<@)%-*OzHG_gf9z1}aLzJ0|ak*LKc>8fy(ekbw`HlDWtO%gVvPRau+Bt0GcSE#+oX4=D(G&|;JcmJPPO6FvA7nTy@AYW)x&QzG`i1S+`Fmyq00HI$hz0-v^t6a*vBYQl0ssI200dcD""")
         self.matcher: MatchProvider = match_provider
         for t in self.table:
             if t[0] != self.table.eof_symbol:
