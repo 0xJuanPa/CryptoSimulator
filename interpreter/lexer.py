@@ -62,7 +62,7 @@ class LexerTable(list, Serializable):
 
 class Lexer:
     def __init__(self, match_provider: MatchProvider):
-        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~$H%%3T0J0S<lHNxo^NL+1f`PJ1i=m2B}G?Aif<6YLCIlYwC*d#Q)jc6mMG(^);Rz;WT)BBLGg6phpbYpt<0)y4tMEJ2XcW~$QN4WrhYFO6f2K^hENr~@}$RugPy88n2f?JF&rUbxv(3T)xi#7!LSXczt9pk6*W9JH#~4uJX@(WAC2f3k6mN(_cp@NvR!DOnYBZUeBA942C|y3ac?;Oq9IitX{~;Eh*I)=^&YkFiWBQyrcd1iGJ*f}Qyp$NX+Lviin%BS+I2r%h#yD#lP$0v|$gYW3WIq5e><-Nq&Tr;X$xDL1VV&aV(-SvIq;!il=nk5$Rjrp<wJU)k!WmG+{T{%?O}UA!(WwTZpe_g*tOVDV*D?QJl|5kiY-OadocP(dGfFlSuW;}pfe*7)C`mt7mPVTDL$y-~IJlH1ZxQitEw*#|TpqY#uGDPkImuf1v(RD%Y?wVLixFbMb~v>HMd>gdkmZ#d#jLj4RZqYn4}7@<@)%-*OzHG_gf9z1}aLzJ0|ak*LKc>8fy(ekbw`HlDWtO%gVvPRau+Bt0GcSE#+oX4=D(G&|;JcmJPPO6FvA7nTy@AYW)x&QzG`i1S+`Fmyq00HI$hz0-v^t6a*vBYQl0ssI200dcD""")
+        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~%@S)Lj5T0S<6OX}TdWhWDT|XN#}($6?%v(qLIhWS_0LW<Ce&NwoPF1MtL`SwmPyo%hYJ8?tEwjNfymP&H42jgykMY5;BYhc`E`iB553JMS8k{Ty+80ANMWh}ve0Rchb4kNzE2g^_jv#s;q_960s1w16~gpgme@oj|_x+$t|e;WadzR*IzrE75S}dNNCSC@q5#Yr%s*J4fZ_9)BcP=fRBfdPEht`mnCM(g8U}4iOyG$Mc+9gjuk0#W=YX$9r6;RZ*?5II~<hI`@%%Qj!Y)b~IT)dIV2(Qu)W`Oa{}2ydE*{35!J7qFlxcQBYV6?IMWEsW3s!Y>JHuy6%~;s7Oj`jzJkGXlUZN_pEFZvcheD0Pjhh23%rCN$IekcJJU717(GZPj%1yp43D1Ah_(NKX1WQQDu2@7^`VZdVLa`D-#x@bm}E!ZJzz7?u;KVI*0oYy@n@;@ZC^$wXo$&tG02}0P?7AIxr4HVQ~(0hPtWMlQtIL{_AYN<w$zvkSOo$$cz1VouxFa$u<S3-HOc9ms`JNBZ~Q}_2p+A__`FEb|^`3W*8tilnW~?$xhnqhiFl3!gFLsJhM?H4}yTae0azWR(YWSgpGg*ZTa3S00Hm=xCQ_K)2%E`vBYQl0ssI200dcD""")
         self.matcher: MatchProvider = match_provider
         for t in self.table:
             if t[0] != self.table.eof_symbol:

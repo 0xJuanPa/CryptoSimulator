@@ -73,10 +73,10 @@ class SemanticStaticChecker:
         for opt in node.options.elements:
             opt: Assign
             opt.value.s_check(self, ctx)
-            if opt.name.name in options:
+            if opt.left.name in options:
                 raise Exception("Already asigned option")
-            options.add(opt.name.name)
-            if opt.name.name not in self.agents_subtypes[node.subtype.name][0]:
+            options.add(opt.left.name)
+            if opt.left.name not in self.agents_subtypes[node.subtype.name][0]:
                 raise Exception("Agent subtype option not exists")
 
         defined = set()
@@ -109,7 +109,9 @@ class SemanticStaticChecker:
         '''
         Los nombres de variables y funciones si se comparten pq las funciones podrian ser 1st class citizen
         '''
-        if node.name in self.built_ins:
+        if isinstance(node.left,AttrRes):
+            pass
+        elif node.left.name in self.built_ins:
             raise Exception("Invalid params, cant use built in param")
         node.value.s_check(self, ctx)
 
@@ -144,8 +146,9 @@ class SemanticStaticChecker:
         '''
         # Toda función tiene que haber sido definida antes de ser usada
         '''
-
-        node.Args.s_check(self, ctx)
+        if node.Args is not None:
+            node.Args.s_check(self, ctx)
+        node.name.s_check(self, ctx)
 
     @visitor
     def s_check(self, node: BinaryOp, ctx):
@@ -169,6 +172,10 @@ class SemanticStaticChecker:
         '''
         if node.name not in ctx:
             raise Exception("Function not defined")
+
+    @visitor
+    def s_check(self, node: AttrRes, ctx):
+        pass
 
     @visitor
     def s_check(self, node: String, ctx):

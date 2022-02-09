@@ -9,8 +9,8 @@ dsl = Grammar()
 eps = dsl.epsilon
 
 # ignored terminals
-space, lbreak, tab, sl_comment = dsl.symbol_emit(("space", " ", True), ("lbreak", "\n|\r\n", True), ("tab", "\t", True),
-                                                 ("sl_comment", "#.*(\n|\r\n)", True))
+lbreak, tab, sl_comment, space = dsl.symbol_emit(("lbreak", "\n|\r\n", True), ("tab", "\t", True),
+                                                 ("sl_comment", "#([^\n\r]*", True), ("space", " ", True))
 
 # groups terminals
 o_par, c_par, o_brack, c_brack, o_brace, c_brace = dsl.symbol_emit(("o_par", r"\("), ("c_par", r"\)"),
@@ -19,10 +19,10 @@ o_par, c_par, o_brack, c_brack, o_brace, c_brace = dsl.symbol_emit(("o_par", r"\
                                                                    ("c_brace", r"\}"))
 
 # general pourpouse keyword terminals
-ifkw, elsekw, whilekw, funkw, retkw = dsl.symbol_emit(("if", r"if"), ("else", r"else"), ("while", r"while"),
-                                                      ("func", r"func"), ("ret", r"ret"))
+ifkw, elsekw, whilekw, funkw, retkw = dsl.symbol_emit(("if", r"if "), ("else", r"else "), ("while", r"while "),
+                                                      ("func", r"func "), ("ret", r"ret "))
 # spec keywords terminals
-traderkw, coinkw = dsl.symbol_emit(("trader", r"trader"), ("coin", r"coin"))
+traderkw, coinkw = dsl.symbol_emit(("trader", r"trader "), ("coin", r"coin "))
 
 # literals terminals
 identifier, string, num = dsl.symbol_emit(("identifier", r"[A-Za-z][\dA-Z_a-z]*"), ("string", r"'[^']*'"),
@@ -35,7 +35,7 @@ assign, semicolon = dsl.symbol_emit(("assign", r"="), ("semicolon", r";"))
 not_ = dsl.symbol_emit(("not", r"!"))
 
 # binary operatos priority 0
-mul, div, fdiv, mod = dsl.symbol_emit(("mul", r"\*"), ("div", r"/"), ("fdiv", r"//"), ("mod", r"%"))
+mul, fdiv, div, mod = dsl.symbol_emit(("mul", r"\*"), ("fdiv", r"//"), ("div", r"/"), ("mod", r"%"))
 
 # binary operatos priority 1
 plus, minus = dsl.symbol_emit(("plus", r"\+"), ("minus", r"\-"))
@@ -69,10 +69,10 @@ If, While, Ret = dsl.symbol_emit(*"If,While,Ret".split(","))
 Expr, ExpressionList, CmpExpr, ArithExpr, Term, Factor, Atom = dsl.symbol_emit(
     *"Expr,ExpressionList,CmpExpr,ArithExpr,Term,Factor,Atom".split(","))
 
-FunDef, ArgList = dsl.symbol_emit(*"FunDef,Args".split(","))
+FunDef, ArgList, FunCall = dsl.symbol_emit(*"FunDef,Args,FunCall".split(","))
 
 # Declaration and Assignation Non Terminal
-Assign = dsl.symbol_emit(*"Assign".split(","))
+Assign, AttrResolv = dsl.symbol_emit(*"Assign,AttrResolv".split(","))
 
 Identifier = dsl.symbol_emit(*"Identifier".split(","))
 
@@ -111,7 +111,8 @@ OptsList > OptsList + comma + Assign / (ast.OptList, (0, 2)) \
 | Assign / (ast.OptList,)
 
 ExpressionList > ExpressionList + comma + Expr / (ast.ExpresionList, (0, 2)) \
-| Expr / (ast.ExpresionList,)
+| Expr / (ast.ExpresionList,) \
+| eps
 
 BehaviorList > BehaviorList + Behavior / (ast.PList, (0, 1)) \
 | Behavior / (ast.PList,)
@@ -139,7 +140,8 @@ While > whilekw + Expr + Body / (ast.While, (1, 3))
 Ret > retkw + Expr / (ast.Ret, (1,)) \
 | retkw / (ast.Ret,)
 
-Assign > Identifier + assign + Expr / (ast.Assign, (0, 2))
+Assign > Identifier + assign + Expr / (ast.Assign, (0, 2)) \
+| AttrResolv + assign + Expr / (ast.Assign, (0, 2))
 
 # Expression Lang, dont have to elevate operands,parser already elevates them
 # Shorthands for operator precedence
@@ -162,13 +164,19 @@ Term > Term + Op_prec1 + Factor / (ast.BinaryOp, (0, 2, 1)) \
 | Factor  # throw up
 
 Factor > o_par + Expr + c_par / (1,) \
-| Op_prec0 + Atom / (ast.UnaryOp, (1,0)) \
+| Op_prec0 + Atom / (ast.UnaryOp, (1, 0)) \
 | Atom  # throw up
 
 Atom > Identifier \
 | string / (ast.String,) \
 | num / (ast.Number,) \
-| Identifier + o_par + ExpressionList + c_par / (ast.FunCall, (0, 2))
+| FunCall \
+| AttrResolv \
+| Identifier + dot + FunCall / (ast.AttrRes, (0, 2))
+
+AttrResolv > Identifier + dot + Identifier / (ast.AttrRes, (0, 2))
+
+FunCall > Identifier + o_par + ExpressionList + c_par / (ast.FunCall, (0, 2))
 
 Identifier > identifier / (ast.Identifier,)
 

@@ -72,7 +72,7 @@ class SimulationInterpreter:
 
             for behavior in agn.behavior_list.elements:
                 behavior: ast.FunDef
-                wrapped = tree_interpreter.wrap(behavior)
+                wrapped = tree_interpreter.make_native(behavior)
                 setattr(instance, behavior.name.name, wrapped)
             if agn.type.lexeme == "coin":
                 coins.append(instance)

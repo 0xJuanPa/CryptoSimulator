@@ -109,13 +109,13 @@ class Expression:
 
 class String(Expression):
     def __init__(self, value):
-        val = value.lexeme if hasattr(value,"lexeme") else value #isinstance(value, Token)
+        val = value.lexeme if hasattr(value, "lexeme") else value  # isinstance(value, Token)
         self.value = val
 
 
 class Number(Expression):
     def __init__(self, value):
-        val: str = value.lexeme if hasattr(value,"lexeme") else value  #isinstance(value, Token)
+        val: str = value.lexeme if hasattr(value, "lexeme") else value  # isinstance(value, Token)
         val2 = float(val.replace(",", ".")) if "," in val or "." in val else int(val)
         self.value = val2
 
@@ -125,9 +125,21 @@ class Identifier(Expression):
         self.name = name.lexeme
 
 
+class UnmanagedType(Expression):
+    def __init__(self, val):
+        self.value = val
+
+
+@dataclass
 class FunCall(Expression):
     name: Identifier
     Args: ExpresionList = None
+
+
+@dataclass
+class AttrRes(Expression):
+    parent: Identifier
+    attr: Identifier | FunCall
 
 
 ## OPERATORS
@@ -140,7 +152,7 @@ class BinaryOp(Expression, BinaryAtom):
 
 class UnaryOp(Expression, UnaryAtom):
     def __init__(self, x, op):
-        super.__init__(x)
+        super().__init__(x)
         self.op = op
 
 
@@ -162,10 +174,12 @@ class While(Statement):
     condition: Expression
     body: StatementList
 
+
 @dataclass
 class Assign(Statement):
-    name: Identifier
+    left: Identifier
     value: Expression
+
 
 @dataclass
 class Ret(Statement):
@@ -200,11 +214,10 @@ class Simulation(Atom):
         self.agents = []
         self.funcs = []
         for top in top_level_sts.elements:
-            if isinstance(top,FunDef):
+            if isinstance(top, FunDef):
                 self.funcs.append(top)
             else:
                 self.agents.append(top)
-
 
 
 class NativeFunc:

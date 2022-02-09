@@ -12,11 +12,10 @@ class TreeInterpreter:
     def make_managed(self, fun):
         pass
 
-    def wrap(self, fun: FunDef):
+    def make_native(self, fun: FunDef):
         '''
         returns a python callable objects that wraps managed func for interops
         '''
-
         def wrapper(*args):
             if len(args) != len(fun.params.elements):
                 raise Exception("Runtime Exception diferent param signature")
@@ -25,7 +24,6 @@ class TreeInterpreter:
                 ctx[identifier.name] = val
             val = fun.interpret(self, ctx)
             return val
-
         return wrapper
 
     @visitor
@@ -54,8 +52,10 @@ class TreeInterpreter:
         if isinstance(func,FunDef):
             for param,value in zip(func.params.elements,args):
                 child[param.name] = value
+            func.body.interpret(child)
+
         else:
-            # native func
+            ret = func(*val)
 
 
     @visitor
@@ -99,6 +99,7 @@ class TreeInterpreter:
     @visitor
     def interpret(self, node: StatementList):
         # manage ret here
+        ret = None
         for st in node.elements:
             pass
 
