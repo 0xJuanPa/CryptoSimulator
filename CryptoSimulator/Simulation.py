@@ -47,6 +47,45 @@ class Simulation:
                 coin.updateParameters()
 
 
+def pick_cheaper():
+    '''
+    returns the cheaper coin
+    '''
+    pass
+
+def get_expensier():
+    '''
+    returns the expensier coin
+    '''
+
+def get_random_coin():
+    '''
+    returns a random coin
+    '''
+    pass
+
+def last_buy(coin):
+    '''
+    returns original purhase price, this make an agent non reactive only as now it keeps track
+    '''
+    pass
+
+def buy(coin,amount):
+    pass
+
+
+def sell(coin,amount):
+    pass
+
+
+def leave():
+    '''
+    sells all coins and abandon the simulation
+    '''
+    pass
+
+
+
 if __name__ == "__main__":
     s = Simulation()
-    s.load("./test1.sim")
+    s.load("./SimulationCode.sim")

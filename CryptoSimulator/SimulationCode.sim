@@ -1,0 +1,136 @@
+coin InverseCoin : CoinGenericTemplate [initial_miners=5,initial_value=100]
+{
+# Inverse coin
+update_parameters
+{
+my.value = my.initial_value // market.time  + fluctuation();
+}
+}
+
+
+coin GrowingCoin : CoinGenericTemplate [initial_miners=10,initial_value=50]
+{
+update_parameters
+{
+my.value = my.initial_value + market.time  + fluctuation();
+}
+}
+
+
+coin LocalMinimaCoin : CoinGenericTemplate [initial_miners=10,initial_value=50]
+{
+update_parameters
+{
+# TODO add a positive poly with local minmea P(time)
+# found this function with polynomial interpolation
+# 0.11*x**5 - 1.75*x**4 + 9.71*x**3 - 23.11*x**2+ 22.09*x - 4.32
+my.value = my.initial_value + market.time  + fluctuation();
+}
+}
+
+
+trader RandomTrader : TraderGenericTemplate [initial_money=50]
+{
+# this trader will sell randomly and buy randomly until it get broken or not
+trade
+{
+   coin_sell = pick_random_coin(my.wallet);
+   if coin_sell & Bernoulli(0.5)  {
+    sell(coin_sell);
+   }
+   if my.money {
+   coin_ = pick_random_coin(market.wallet);
+   amount = Uniform(0,my.money) // 1;
+   buy(coin_,amount);
+   }
+   else {
+    if !my.wallet {
+        leave();
+    }
+   }
+}
+}
+
+
+trader GreedyReactive : TraderGenericTemplate [initial_money=50]
+{
+# this is a Greddy Reactive agent it reacts to enviorment with no previous info, it sells expensive and buy cheaper
+trade
+{
+   expensier_sell = pick_expensier_coin(my.wallet);
+   if expensier_sell & Bernoulli(0.5) {
+    sell(expensier_sell);
+   }
+   if my.money {
+   if Bernoulli(0.5) {
+   coin_ = pick_cheaper_coin(market.wallet);
+   amount = Uniform(0,my.money) // 1;
+   buy(coin_,amount);
+   }
+   }
+   else {
+    if !wallet {
+        leave();
+    }
+   }
+}
+}
+
+
+trader GreedyWithKnowlege : TraderGenericTemplate [initial_money=50]
+{
+# this is a greedy trader that keeps track on how much costed to try sell strategy
+trade
+{
+   coin_picked = get_with_more_utility(my.wallet,market.wallet);
+   if coin_picked & Bernoulli(0.6) {
+    sell(coin_picked);
+   }
+   if my.money {
+   coin_ = my.tuned_buy_picker(market.wallet);
+   if Bernoulli(my.tuned_buy){
+   amount = my.tuned_amount;
+   buy(coin_,amount);
+   }
+   }
+   else {
+    if !wallet {
+        leave();
+    }
+   }
+}
+}
+
+
+trader IntelliTrader : TraderGeneticTemplate [initial_money=50]
+{
+# this trader initializes itself calculating an aceptable way to invest using Genetic Algorithms
+
+trade
+{
+   coin_picked = my.tuned_sell_picker();
+   if coin_picked & Bernoulli(my.tuned_sell) {
+    sell(coin_picked);
+   }
+   if my.money {
+   coin_ = my.tuned_buy_picker(market.wallet);
+   if Bernoulli(my.tuned_buy){
+   amount = my.tuned_amount;
+   buy(coin_,amount);
+   }
+   }
+   else {
+    if !wallet {
+        leave();
+    }
+   }
+}
+}
+
+
+
+func sum(x, y) {
+
+ret x + y;
+
+}

@@ -13,3 +13,13 @@ class TraderGenericTemplate:
         is intended to eval how much the action will be commited
         '''
         pass
+
+
+
+
+class TraderGeneticTemplate:
+    def __init__(self,name,*,initial_money):
+        pass
+
+    def trade(self):
+        pass
