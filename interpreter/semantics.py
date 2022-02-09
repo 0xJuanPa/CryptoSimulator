@@ -25,6 +25,7 @@ class SemanticStaticChecker:
     def s_check(self, node: Simulation):
         for fun in node.funcs:
             fun.s_check(self, self.global_ctx)
+            self.global_ctx[fun.name.name] = None
         for agent in node.agents:
             agent.s_check(self, self.global_ctx)
 
@@ -110,10 +111,11 @@ class SemanticStaticChecker:
         Los nombres de variables y funciones si se comparten pq las funciones podrian ser 1st class citizen
         '''
         if isinstance(node.left,AttrRes):
-            pass
+            return
         elif node.left.name in self.built_ins:
             raise Exception("Invalid params, cant use built in param")
         node.value.s_check(self, ctx)
+        ctx[node.left.name] = None
 
     @visitor
     def s_check(self, node: If, ctx: Context):

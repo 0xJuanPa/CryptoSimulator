@@ -8,18 +8,8 @@ class TraderGenericTemplate:
         pass
 
 
-    def analyze_coin_load(self, coin):
-        '''
-        is intended to eval how much the action will be commited
-        '''
-        pass
 
 
-
-
-class TraderGeneticTemplate:
+class TraderGeneticTemplate(TraderGenericTemplate):
     def __init__(self,name,*,initial_money):
-        pass
-
-    def trade(self):
-        pass
+        super().__init__()

@@ -44,7 +44,7 @@ class SimulationInterpreter:
         self.agent_templates: dict = agent_templates
         self.lexer = Lexer(RegxMatcher())
         self.parser = Parser(ast)
-        self.static_checks = SemanticStaticChecker(built_ins.keys(), agent_templates)
+
 
     def interpret_simulation(self, prog: str):
         '''
@@ -52,7 +52,9 @@ class SimulationInterpreter:
         '''
         tokens = self.lexer(prog)
         simulation: ast.Simulation = self.parser(tokens)
-        self.static_checks(simulation)
+        static_checks = SemanticStaticChecker(self.built_ins.keys(), self.agent_templates)
+
+        static_checks(simulation) # todo remove funcs as 1st class ctz maybe
 
         coins = []
         traders = []
@@ -61,6 +63,8 @@ class SimulationInterpreter:
         for func in simulation.funcs:
             func: ast.FunDef
             ctx[func.name.name] = func
+        for name,func in self.built_ins.items():
+            ctx[name] = func
 
         tree_interpreter = TreeInterpreter(ctx)
 

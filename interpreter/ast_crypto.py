@@ -234,7 +234,7 @@ class Context(dict):
         if super().__contains__(item):
             return True
         elif self.parentctx is not None:
-            return str in self.parentctx
+            return item in self.parentctx
         return False
 
     def create_child_context(self):

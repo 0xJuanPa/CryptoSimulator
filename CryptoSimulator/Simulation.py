@@ -6,7 +6,7 @@ from interpreter import SimulationInterpreter
 
 class Simulation:
     def __init__(self):
-        self.coins = list()
+        self.wallet = list()
         self.traders = list()
 
     def load(self, filepath):
@@ -23,69 +23,28 @@ class Simulation:
                 agent_teplates[name] = clas
 
         from library_built_in import prob_distributions as prob
-        builtins = dict()
+        from library_built_in import sim_ops
 
-        for name, func in chain(inspect.getmembers(prob,inspect.isfunction)):
+        builtins = dict()
+        for name, func in chain(inspect.getmembers(sim_ops, inspect.isfunction),
+                                inspect.getmembers(prob, inspect.isfunction)):
             if not name.startswith("_"):
                 builtins[name] = func
 
         interpr = SimulationInterpreter(builtins, agent_teplates)
-        self.coins, self.traders = interpr.interpret_simulation(code)
+        self.wallet, self.traders = interpr.interpret_simulation(code)
 
     def run(self, endTime):
         current_time = 0
-
-        while current_time < endTime:
-            # to run simulation in traders mind it my have to be clonable or inmmutable
-            for trader in self.traders:
-                trader.trade(self.coins)
-
-            for coin in self.coins:
-                coin.validate()
-
-            for coin in self.coins:
-                coin.updateParameters()
-
-
-def pick_cheaper():
-    '''
-    returns the cheaper coin
-    '''
-    pass
-
-def get_expensier():
-    '''
-    returns the expensier coin
-    '''
-
-def get_random_coin():
-    '''
-    returns a random coin
-    '''
-    pass
-
-def last_buy(coin):
-    '''
-    returns original purhase price, this make an agent non reactive only as now it keeps track
-    '''
-    pass
-
-def buy(coin,amount):
-    pass
-
-
-def sell(coin,amount):
-    pass
-
-
-def leave():
-    '''
-    sells all coins and abandon the simulation
-    '''
-    pass
-
+        for trader in self.traders:
+            while current_time < endTime:
+                # to run simulation in traders mind it my have to be clonable or inmmutable
+                trader.trade(self.wallet)
+                for coin in self.wallet:
+                    coin.updateParameters()
 
 
 if __name__ == "__main__":
     s = Simulation()
     s.load("./SimulationCode.sim")
+    s.run(1000)

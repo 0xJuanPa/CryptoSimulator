@@ -33,13 +33,13 @@ class TreeInterpreter:
         for opt in node.elements:
             opt: Assign
             opt.interpret(self, child)
-            res[opt.name.name] = child[opt.name.name]
+            res[opt.left.name] = child[opt.left.name]
         return res
 
     @visitor
     def interpret(self, node: Assign, ctx):
         res = node.value.interpret(self, ctx)
-        ctx[node.name.name] = res
+        ctx[node.left.name] = res
 
     @visitor
     def interpret(self, node: FunCall, ctx):
