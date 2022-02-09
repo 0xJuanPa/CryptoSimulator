@@ -12,7 +12,7 @@ except ImportError:
 
 INVALID = {"", ""}
 RESERVED = set(iter(".*+?()[]{}^\\<>"))
-ALPHABET = set(iter(string.printable)) - RESERVED - INVALID
+ALPHABET = set(iter(string.printable)) - INVALID - set(iter("\n\r\t"))
 DIGITS = set(iter(string.digits))
 NONDIGIT = ALPHABET - DIGITS
 
@@ -139,7 +139,8 @@ class Char(UnaryAtom):
 
 class EscapedOrShorthand(BinaryAtom):
     def eval(self) -> Automaton:
-        if self.first.lexeme == "\\" and self.second.lexeme != ".":
+        if self.first.lexeme == "." and self.second.lexeme == "." \
+                or self.first.lexeme =="\\" and self.second.lexeme != ".":
             content = self.second.lexeme
             alpha = shorthand_resolver(content)
         else:
@@ -157,7 +158,8 @@ class MixedRange(BinaryAtom):
         for part in (self.first, self.second):
             cnt = None
             if isinstance(part, EscapedOrShorthand):
-                if part.first.lexeme == "\\" and part.second.lexeme != ".":
+                if part.first.lexeme == "." and part.second.lexeme == "." \
+                        or part.first.lexeme == "\\" and part.second.lexeme != ".":
                     content = part.second.lexeme
                     cnt = shorthand_resolver(content)
                 else:
