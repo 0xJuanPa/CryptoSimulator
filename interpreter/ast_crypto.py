@@ -19,15 +19,19 @@ class TOKEN_TYPE(Enum):
     LBREAK = auto()
     SPACE = auto()
     TAB = auto()
-    COMMENT = auto()
+    SL_COMMENT = auto()
 
-    ASSIGN = auto()
+    DDOT = auto()
     DOT = auto()
+    COMMA = auto()
+    SEMICOLON = auto()
+
     PLUS = auto()
     MINUS = auto()
     MULT = auto()
-    DIV = auto()
+    MOD = auto()
     FLOORDIV = auto()
+    DIV = auto()
 
     AND = auto()
     OR = auto()
@@ -38,22 +42,27 @@ class TOKEN_TYPE(Enum):
     EQ = auto()
     NEQ = auto()
 
+    ASSIGN = auto()
+
     NOT = auto()
     NEG = auto()
 
-    NONE = auto()
     NUMBER = auto()
     STRING = auto()
-    TRUE = auto()
-    FALSE = auto()
     IDENTIFIER = auto()
 
     # control statements
-    FOR = auto()
+    FOR = auto()  # ?
     WHILE = auto()
     IF = auto()
     ELSE = auto()
-    RETURN = auto()
+    RET = auto()
+    FUNC = auto()
+
+    COIN_KW = auto()
+    TRADER_KW = auto()
+    MY_KW = auto()
+    MARKET_KW = auto()
 
 
 @dataclass
@@ -107,17 +116,16 @@ class Expression:
     pass
 
 
-class String(Expression):
-    def __init__(self, value):
-        val = value.lexeme if hasattr(value, "lexeme") else value  # isinstance(value, Token)
+class Literal(Expression):
+    def __init__(self, value: Token):
+        match value.name:
+            case TOKEN_TYPE.NUMBER:
+                val = float(value.lexeme) if "," in value.lexeme else int(value.lexeme)
+            case TOKEN_TYPE.STRING:
+                val = value.lexeme
+            case _:
+                raise Exception("Not supported literal")
         self.value = val
-
-
-class Number(Expression):
-    def __init__(self, value):
-        val: str = value.lexeme if hasattr(value, "lexeme") else value  # isinstance(value, Token)
-        val2 = float(val.replace(",", ".")) if "," in val or "." in val else int(val)
-        self.value = val2
 
 
 class Identifier(Expression):
@@ -145,15 +153,15 @@ class AttrRes(Expression):
 ## OPERATORS
 
 class BinaryOp(Expression, BinaryAtom):
-    def __init__(self, x, y, op):
+    def __init__(self, x, y, op: Token):
         super().__init__(x, y)
-        self.op = op
+        self.op: TOKEN_TYPE = op.name
 
 
 class UnaryOp(Expression, UnaryAtom):
-    def __init__(self, x, op):
+    def __init__(self, x, op: Token):
         super().__init__(x)
-        self.op = op
+        self.op: TOKEN_TYPE = op.name
 
 
 # STATEMENTS
@@ -218,11 +226,6 @@ class Simulation(Atom):
                 self.funcs.append(top)
             else:
                 self.agents.append(top)
-
-
-class NativeFunc:
-    def __init__(self):
-        pass
 
 
 class Context(dict):

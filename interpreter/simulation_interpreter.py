@@ -42,8 +42,8 @@ class SimulationInterpreter:
     def __init__(self, built_ins, agent_templates):
         self.built_ins: dict = built_ins
         self.agent_templates: dict = agent_templates
-        self.lexer = Lexer(RegxMatcher(),ast.TOKEN_TYPE)
-        self.parser = Parser(ast,ast.TOKEN_TYPE)
+        self.lexer = Lexer(RegxMatcher(), ast.TOKEN_TYPE)
+        self.parser = Parser(ast, ast.TOKEN_TYPE)
 
     def interpret_simulation(self, prog: str, market):
         '''
@@ -66,7 +66,7 @@ class SimulationInterpreter:
         for name, func in self.built_ins.items():
             ctx[name] = func
 
-        ctx["market"] = market
+        ctx[ast.TOKEN_TYPE.MARKET_KW] = market
         tree_interpreter = TreeInterpreter(ctx)
 
         for agn in simulation.agents:
@@ -78,10 +78,10 @@ class SimulationInterpreter:
             for behavior in agn.behavior_list.elements:
                 behavior: ast.FunDef
                 childctx = ctx.create_child_context()
-                childctx["my"] = instance
-                wrapped = tree_interpreter.make_native(behavior,childctx)
+                childctx[ast.TOKEN_TYPE.MY_KW] = instance
+                wrapped = tree_interpreter.make_native(behavior, childctx)
                 setattr(instance, behavior.name.name, wrapped)
-            if "coin" in agn.type.lexeme: # temporal
+            if agn.type == ast.TOKEN_TYPE.COIN_KW:
                 coins.append(instance)
             else:
                 traders.append(instance)

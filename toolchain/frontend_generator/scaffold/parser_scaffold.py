@@ -135,7 +135,7 @@ class Parser:
                     state_stack.append(goto)
                 case self.table.Action.ACCEPT:
                     last_symbol = symbol_stack.pop()
-                    assert last_symbol == self.table.initial_symbol  # just for fun
+                    assert last_symbol == self.table.initial_symbol  # just for fun :(
                     return last_symbol.content
                 case _:
                     expected = self.table.expect(curr_state)

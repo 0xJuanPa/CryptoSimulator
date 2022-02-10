@@ -14,9 +14,6 @@ class TreeInterpreter:
     def __call__(self, node):
         return self.interpret(node, self.global_context)
 
-    def make_managed(self, fun):
-        pass
-
     def make_native(self, fun: FunDef, context=None):
         '''
         returns a python callable objects that wraps managed func for interops
@@ -27,7 +24,7 @@ class TreeInterpreter:
         def wrapper(*args):
             if len(args) != len(fun.params.elements if fun.params is not None else []):
                 raise Exception("Runtime Exception diferent param signature")
-            child = context.create_child_context()
+            child = context.create_child_context() # my with be a level up in contexts
             if fun.params:
                 for identifier, val in zip(fun.params.elements, args):
                     child[identifier.name] = val
@@ -80,19 +77,25 @@ class TreeInterpreter:
     def interpret(self, node: BinaryOp, ctx):
         first = node.first.interpret(self, ctx)
         second = node.second.interpret(self, ctx)
-        match node.op.lexeme:
+        match node.op:
             case TOKEN_TYPE.PLUS:
                 res = first + second
+            case TOKEN_TYPE.AND:
+                res = first & second
+            case _:
+                raise Exception("??")
         return res
 
     @visitor
     def interpret(self, node: UnaryOp, ctx):
         first = node.first.interpret(self, ctx)
-        match node.op.lexeme:
-            case "-":
+        match node.op:
+            case TOKEN_TYPE.MINUS:
                 res = -first
-            case "!":
+            case TOKEN_TYPE.NOT:
                 res = ~first
+            case _:
+                raise Exception("??")
         return res
 
     @visitor
@@ -137,11 +140,7 @@ class TreeInterpreter:
         return res
 
     @visitor
-    def interpret(self, node: String, ctx):
+    def interpret(self, node: Literal, ctx):
         res = node.value
         return res
 
-    @visitor
-    def interpret(self, node: Number, ctx):
-        res = node.value
-        return res

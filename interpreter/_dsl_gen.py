@@ -8,56 +8,77 @@ dsl = Grammar()
 # epsilon terminal
 eps = dsl.epsilon
 
-# ignored terminals
-lbreak, tab, sl_comment, space = dsl.symbol_emit(("lbreak", "\n|\r\n", True), ("tab", "\t", True),
-                                                 ("sl_comment", "#[^\n\r]*", True), ("space", " ", True))
+### EXPLANATION
+# regex engine very limited with no capture groups and lookaheads so I used priority of definition to avoid complexity
+# besides I can "or" all lexeme regexes like "(r)|" and the engine will match greddier I started
+# doing it with named groups but I was not satisfied adding match:name just in the content of the state I wanted tags
+# of entry of the group and tags for finish so I may have all prefix subgroups.
+# I couldnt continue to mantain the old impl had to abort it and switch to other topics
 
-# groups terminals
-o_par, c_par, o_brack, c_brack, o_brace, c_brace = dsl.symbol_emit(("o_par", r"\("), ("c_par", r"\)"),
-                                                                   ("o_brack", r"\["),
-                                                                   ("c_brack", r"\]"), ("o_brace", r"\{"),
-                                                                   ("c_brace", r"\}"))
 
 # general pourpouse keyword terminals
-ifkw, elsekw, whilekw, funkw, retkw = dsl.symbol_emit(("if", r"if "), ("else", r"else "), ("while", r"while "),
-                                                      ("func", r"func "), ("ret", r"ret "))
+ifkw, elsekw, whilekw, retkw, funkw = dsl.symbol_emit((ast.TOKEN_TYPE.IF, r"if "), (ast.TOKEN_TYPE.ELSE, r"else "),
+                                                      (ast.TOKEN_TYPE.WHILE, r"while "),
+                                                      (ast.TOKEN_TYPE.RET, r"ret "),
+                                                      (ast.TOKEN_TYPE.FUNC, r"func "))
 # spec keywords terminals
-traderkw, coinkw = dsl.symbol_emit(("trader", r"trader "), ("coin", r"coin "))
+traderkw, coinkw, mykw, marketkw = dsl.symbol_emit((ast.TOKEN_TYPE.TRADER_KW, r"trader "),
+                                                   (ast.TOKEN_TYPE.COIN_KW, r"coin "),
+                                                   # if I want them as keywords have to match  dot cause no lookaheads
+                                                   (ast.TOKEN_TYPE.MY_KW, r"my."),
+                                                   (ast.TOKEN_TYPE.MARKET_KW, r"market."))
+
+# ignored terminals
+lbreak, tab, sl_comment, space = dsl.symbol_emit((ast.TOKEN_TYPE.LBREAK, "\n|\r\n", True),
+                                                 (ast.TOKEN_TYPE.TAB, "\t", True),
+                                                 (ast.TOKEN_TYPE.SL_COMMENT, "#[^\n\r]*", True),
+                                                 (ast.TOKEN_TYPE.SPACE, " ", True))
+
+# groups terminals
+o_par, c_par, o_brack, c_brack, o_brace, c_brace = dsl.symbol_emit((ast.TOKEN_TYPE.O_PAR, r"\("),
+                                                                   (ast.TOKEN_TYPE.C_PAR, r"\)"),
+                                                                   (ast.TOKEN_TYPE.O_BRACKETS, r"\["),
+                                                                   (ast.TOKEN_TYPE.C_BRACKETS, r"\]"),
+                                                                   (ast.TOKEN_TYPE.O_BRACES, r"\{"),
+                                                                   (ast.TOKEN_TYPE.C_BRACES, r"\}"))
 
 # literals terminals
-identifier, string, num = dsl.symbol_emit(("identifier", r"[A-Za-z][\dA-Z_a-z]*"), ("string", r"'[^']*'"),
-                                          ("num", r"\d+|\d+[\.]\d+"))
-
-# special terminals
-assign, semicolon = dsl.symbol_emit(("assign", r"="), ("semicolon", r";"))
+identifier, string, num = dsl.symbol_emit((ast.TOKEN_TYPE.IDENTIFIER, r"[A-Za-z][\dA-Z_a-z]*"),
+                                          (ast.TOKEN_TYPE.STRING, r"'[^']*'"),
+                                          (ast.TOKEN_TYPE.NUMBER, r"\d+|\d+[\.]\d+"))
 
 # unary operators terminals
-not_ = dsl.symbol_emit(("not", r"!"))
+not_ = dsl.symbol_emit((ast.TOKEN_TYPE.NOT, r"!"))
 
 # binary operatos priority 0
-mul, fdiv, div, mod = dsl.symbol_emit(("mul", r"\*"), ("fdiv", r"//"), ("div", r"/"), ("mod", r"%"))
+mul, mod, fdiv, div, = dsl.symbol_emit((ast.TOKEN_TYPE.MULT, r"\*"), (ast.TOKEN_TYPE.MOD, r"%"),
+                                       (ast.TOKEN_TYPE.FLOORDIV, r"//"), (ast.TOKEN_TYPE.DIV, r"/"), )
 
 # binary operatos priority 1
-plus, minus = dsl.symbol_emit((ast.TOKEN_TYPE.PLUS, r"\+"), ("minus", r"\-"))
+plus, minus = dsl.symbol_emit((ast.TOKEN_TYPE.PLUS, r"\+"), (ast.TOKEN_TYPE.MINUS, r"\-"))
 
 # binary operatos priority 2
-or_, and_ = dsl.symbol_emit(("or", r"\|"), ("and", r"&"))
+or_, and_ = dsl.symbol_emit((ast.TOKEN_TYPE.OR, r"\|"), (ast.TOKEN_TYPE.AND, r"&"))
 
 # binary operatos priority 3
-eq, neq, gt, geq, lt, leq = dsl.symbol_emit(("eq", r"=="), ("neq", r"!="), ("gt", r"\>"), ("geq", r"\>="),
-                                            ("lt", r"\<"),
-                                            ("leq", r"\<="))
+eq, neq, gt, geq, lt, leq = dsl.symbol_emit((ast.TOKEN_TYPE.EQ, r"=="), (ast.TOKEN_TYPE.NEQ, r"!="),
+                                            (ast.TOKEN_TYPE.GT, r"\>"), (ast.TOKEN_TYPE.GE, r"\>="),
+                                            (ast.TOKEN_TYPE.LT, r"\<"), (ast.TOKEN_TYPE.LE, r"\<="))
+
+# special terminals
+assign, semicolon = dsl.symbol_emit((ast.TOKEN_TYPE.ASSIGN, r"="), (ast.TOKEN_TYPE.SEMICOLON, r";"))
 
 # splitter terminals
-comma, dot, ddot = dsl.symbol_emit(("comma", r"\,"), ("dot", r"\."), ("ddot", ":"))
+comma, dot, ddot = dsl.symbol_emit((ast.TOKEN_TYPE.COMMA, r"\,"), (ast.TOKEN_TYPE.DOT, r"\."),
+                                   (ast.TOKEN_TYPE.DDOT, ":"))
 
 # initial NonTerminal
 CryptoDsl = dsl.symbol_emit("CryptoDsl")
 dsl.initial_symbol = CryptoDsl
 
 # Nonterminals for language specs
-TopLevelSt, TopLevelStList, EntDec, Entkwgrp, Opts, OptsList, Behavior, BehaviorList = dsl.symbol_emit(
-    *"TopLevelSt,TopLevelStList,EntDec,Entkwgrp,Opts,OptsList,Behavior,BehaviorList".split(","))
+TopLevelSt, TopLevelStList, EntDec, Entkwgrp, KwResolv, Opts, OptsList, Behavior, BehaviorList = dsl.symbol_emit(
+    *"TopLevelSt,TopLevelStList,EntDec,Entkwgrp,KwResolv,Opts,OptsList,Behavior,BehaviorList".split(","))
 
 # Non Terminals for Statements and Args
 StatementList, Statement, Body = dsl.symbol_emit(*"StatementList,Statement,Body".split(","))
@@ -97,6 +118,8 @@ TopLevelSt > FunDef \
 
 # spec keywords shorthand
 Entkwgrp > traderkw | coinkw
+
+KwResolv > mykw | marketkw
 
 EntDec > Entkwgrp + Identifier + ddot + Identifier + Opts + o_brace + BehaviorList + c_brace \
 / (ast.AgentDec, (0, 1, 3, 4, 6))
@@ -172,9 +195,9 @@ Atom > Identifier \
 | num / (ast.Number,) \
 | FunCall \
 | AttrResolv \
-| Identifier + dot + FunCall / (ast.AttrRes, (0, 2))
+| KwResolv + FunCall / (ast.AttrRes, (0, 1))
 
-AttrResolv > Identifier + dot + Identifier / (ast.AttrRes, (0, 2))
+AttrResolv > KwResolv +  Identifier / (ast.AttrRes, (0, 1))
 
 FunCall > Identifier + o_par + ExpressionList + c_par / (ast.FunCall, (0, 2))
 

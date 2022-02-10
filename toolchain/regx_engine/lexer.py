@@ -1,11 +1,20 @@
 import base64
+import io
 import lzma
 import pickle
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
+
+class TOKEN_TYPE(Enum):
+    pass
 
 
 class Serializable:
+    class Finder(pickle.Unpickler):
+        def find_class(self, __module_name: str, __global_name: str):
+            return super().find_class(__name__, __global_name)
+
     def get_serial_str(self) -> str:
         compressor = lzma.LZMACompressor()
         serial = pickle.dumps(self, fix_imports=True)
@@ -19,15 +28,16 @@ class Serializable:
         decompressor = lzma.LZMADecompressor()
         serial = base64.b85decode(serial)
         serial = decompressor.decompress(serial)
-        table = pickle.loads(serial, fix_imports=True)
+        pickler = Serializable.Finder(io.BytesIO(serial))
+        table = pickler.load()
         return table
 
 
 @dataclass
 class Token:
-    name: str
+    name: str | TOKEN_TYPE
     lexeme: str
-    type: str
+    extra: str
     line: int
     column: int
 
@@ -61,7 +71,9 @@ class LexerTable(list, Serializable):
 
 
 class Lexer:
-    def __init__(self, match_provider: MatchProvider):
+    def __init__(self, match_provider: MatchProvider,tokens_type= None):
+        if tokens_type:
+            globals()["TOKEN_TYPE"] = tokens_type
         self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~nX-<6Qti0S<Fok|hNVv4NZ>be@vYabVR|_K9Ft`RM@&aM{L3v{P%Lr6>N6(KC~^TdHWGX*KY~N|8*Z@{FS~d2iD#(HqeuvADxO;WvTUDwQ>gPjnPfeHFMr@?Y4}z>%J1w+5Ca21xww#%AR&C+%#$j6xk2{CHNOa8v+0p3Y`bPcjqIfRsFRjI;TH#?Od76WfM4Rx`g(mC6a;16QN%t98**0bFN-wW6N%7f~HKS-^n7C^mDXSljjTd8DZPf(t&NGRS0a>h--Nw5rdyLLc#7^lCFfq9xt>YFs5XK(hb<^U6K`kUSD+00I92<^li!E1Y5KvBYQl0ssI200dcD""")
         self.matcher: MatchProvider = match_provider
         for t in self.table:

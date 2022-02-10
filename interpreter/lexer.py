@@ -35,7 +35,7 @@ class Serializable:
 
 @dataclass
 class Token:
-    name: str
+    name: str | TOKEN_TYPE
     lexeme: str
     extra: str
     line: int
@@ -74,7 +74,7 @@ class Lexer:
     def __init__(self, match_provider: MatchProvider,tokens_type= None):
         if tokens_type:
             globals()["TOKEN_TYPE"] = tokens_type
-        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~&nl=3M|l0S<AHB_~Ak$fI4=l@#oZ67EPJr|FQ4m<eF#V(fd%G3sXN+m8xIRd74B!(3;;ohz^~lfE#!u+XP2EqrooS?5C$ST1~LPqglIgO$&7)@otoW^eJ`x)6z1f(zXsV%BA2rtjMxIu!Yt37oWrs$AFSh%VLrpBMQR62b$o_Q2*Bc$Ik{5FMi>8c&Gbng}!q4zOXFt&z0l7Y@5Cb06GJp)sPL5|4}BO}>N^O$tWiLCr;9US$Y%sA*T8d40Wp-{X{>IPbcU_5qwVN(;Wq`rZm@R9=^1aJ9|NcnBCXfLIK~r*uS`UT96zbNv(i)m@T@Z8t9tbrPzsVeLeblzFI@f5TgNWIQi$<qW&2hLzv<csih&FXe=3fc=e_`tvU{6hQ``hT(C-p`dO)8+{)cQoH5eW=F4@ja*?@i~--Mh_dRGG%yQ|K=%QfWn+l1us2sAb5Vz{vkMk*&rqdDKDcJTBX7mz4rpfMQPCRN0RC`S6B@9il|VmaDZ+CQ?NTB)-6M$@dZa>;;d)v`+vG2#@ZWx?-X{a~69w50Y&D-Ks7yqt?AYR58mVk8lqa^OLPM7I0Ok9A<Tc)AWj{6N-vPUu58fsQlPa!aSYPeU?<j^20=BJo)c^nhZ9am`Tr~=^00Dvo%LV`dd(v#cvBYQl0ssI200dcD""")
+        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~)mIn_U1v0S<LX87Rdlnp@kRgQ->W0Ov+Za-KAQ`-#pUnB~w|B5@Vm;u_IHTf}s%g3Q^Mo(o16*zHYcX7sO~wx;G!cE0dTX<631p}?p}2#WzaT)L<GPD?jw9xKD@n(Ur?Hao8KSkTVCdsRUYP)qFaHUQG{8~xCoRSNfVw0ssE@6Ge9Y~(H=vwVO!kFa}njM6%<sW+bXek+m5k7j!#Zu&{%^a|mC!h9$ea?D6mFyr(MzG<0FJD=I+vR}%BRcU2#jvO9HH^Yt;ICu~qnxg>B_5bUu!h>7-*SlxY!%I`fBZ5+VOBa66I~ophKO&a@9$uE|c&0I?Wk8eZrwB_Z850H%dC$==$_`y{c{CC>3J<{Vxk#E_sEh#Pj$e`I|E1Y7S@Vf`88enSGvjX@n0;2tSh&f=({<F(woXr(uw65aiF0K%mJw6P67cK+Wam^#o|93U=JA@JJSuDVz*N3R9D#FNNM%!hG&2jK;d7qL;l0wz&b6|E|30m9fht;SKB@$fGt}b&4E6lrZkPn6HUIzsLr3r{Ba%@&00FlHg9iWrkb;?cvBYQl0ssI200dcD""")
         self.matcher: MatchProvider = match_provider
         for t in self.table:
             if t[0] != self.table.eof_symbol:

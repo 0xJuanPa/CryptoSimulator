@@ -131,6 +131,6 @@ trade
 
 func fluctuation() {
 
-ret 1;
+ret ;
 
 }

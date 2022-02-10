@@ -35,7 +35,7 @@ class Serializable:
 
 @dataclass
 class Token:
-    name: str
+    name: str | TOKEN_TYPE
     lexeme: str
     extra: str
     line: int
