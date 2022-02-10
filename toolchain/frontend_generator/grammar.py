@@ -222,7 +222,11 @@ class LRitem:
 
 
 class Grammar:
-    def __init__(self):
+    def __init__(self, attribute_encode=None, attribute_apply=None):
+        if not isinstance(attribute_encode, Callable):
+            self.attribute_encode = self._attribute_encode
+        if not isinstance(attribute_apply, Callable):
+            self.attribute_apply = self._attribute_apply
         self.eof: EOF = EOF()
         self.epsilon: Epsilon = Epsilon()
         self.terminals: List[Terminal | EOF] = [self.eof, self.epsilon]
@@ -344,13 +348,13 @@ class Grammar:
                 elif isinstance(attribute[0], str):
                     prod_class = attribute[0]
                     arg = popped_syms[0].content if len(popped_syms) else None
-                    instance = ast_types.__dict__[prod_class](arg)
+                    instance = getattr(ast_types, prod_class)(arg)
                 else:
                     raise Exception("Attribute Not Supported")
             elif len(attribute) == 2:
                 prod_class, args_map = attribute
                 args = list(map(lambda i: popped_syms[i].content, args_map))
-                instance = ast_types.__dict__[prod_class](*args)
+                instance = getattr(ast_types, prod_class)(*args)
             else:
                 raise Exception("Attribute Not Supported")
         else:
@@ -383,14 +387,14 @@ class Grammar:
                 if item.is_reduce:
                     prod = item.production
                     if prod.left_part == self.initial_symbol:
-                        table.action((state.name, self.eof), (LRtable.Action.ACCEPT, 0))
+                        table.action((state.name, self.eof.name), (LRtable.Action.ACCEPT, 0))
                     else:
                         for symbol in item.lookaheads:
                             symbol: Symbol
-                            attribute = self._attribute_encode(prod.attribute)
-                            right_part_dbg = list(map(repr, prod.right_part)) if prod.right_part[
-                                                                                     0] != self.epsilon else []
-                            reduce_info = ReduceInfo(str(prod.left_part), right_part_dbg, attribute)
+                            attribute = self.attribute_encode(prod.attribute)
+                            right_part_dbg = [s.name for s in prod.right_part] if prod.right_part[
+                                                                                      0] != self.epsilon else []
+                            reduce_info = ReduceInfo(prod.left_part.name, right_part_dbg, attribute)
                             table.action((state.name, symbol.name), (LRtable.Action.REDUCE, reduce_info))
                 else:
                     symbol = item.peek_nxt_symbol()
@@ -402,7 +406,7 @@ class Grammar:
         serial_str = table.get_serial_str()
         parser_file = inspect.getfile(ReduceInfo)
         scaffold_cnt = open(parser_file).read()
-        attrib_src = inspect.getsource(Grammar._attribute_apply)
+        attrib_src = inspect.getsource(self.attribute_apply)
         unindented = inspect.cleandoc(attrib_src).replace("\n", "\n" + " " * 4)
         code = scaffold_cnt.replace("def _attribute_apply(attribute, popped_syms, info): pass", unindented)
         parser_content = code.replace("REPLACE-ME-PARSER", serial_str)

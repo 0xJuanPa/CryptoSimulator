@@ -1,4 +1,5 @@
 import base64
+import io
 import lzma
 import pickle
 from collections import namedtuple
@@ -7,7 +8,15 @@ from enum import Enum, auto
 from typing import Dict, Any, List
 
 
+class TOKEN_TYPE(Enum):
+    pass
+
+
 class Serializable:
+    class Finder(pickle.Unpickler):
+        def find_class(self, __module_name: str, __global_name: str):
+            return super().find_class(__name__, __global_name)
+
     def get_serial_str(self) -> str:
         compressor = lzma.LZMACompressor()
         serial = pickle.dumps(self, fix_imports=True)
@@ -21,7 +30,8 @@ class Serializable:
         decompressor = lzma.LZMADecompressor()
         serial = base64.b85decode(serial)
         serial = decompressor.decompress(serial)
-        table = pickle.loads(serial, fix_imports=True)
+        pickler = Serializable.Finder(io.BytesIO(serial))
+        table = pickler.load()
         return table
 
 
@@ -50,7 +60,7 @@ class LRtable(Serializable):
         self._goto[key] = value
 
     def expect(self, state):
-        act = map(lambda x: x[1],filter(lambda x: x[0] == state, self._action.keys()))
+        act = map(lambda x: x[1], filter(lambda x: x[0] == state, self._action.keys()))
         return set(act)
 
 
@@ -59,14 +69,12 @@ ReduceInfo = namedtuple("ReduceInfo", ["prod_left", "prod_right", "attribute"])
 
 @dataclass
 class ParserSymbol:
-    id: Any
+    name: Any
     content: Any = None
     dbg_syms: Any = None
 
     def __eq__(self, other):
-        if isinstance(other, str):
-            pass
-        res = self.id == other
+        res = self.name == other
         return res
 
     def view(self):
@@ -75,7 +83,7 @@ class ParserSymbol:
         graph = graphviz.Digraph("pt", format="svg")
 
         def mkgrph(s: ParserSymbol):
-            graph.node(str(id(s)), label=str(s.id))
+            graph.node(str(id(s)), label=str(s.name))
             for chd in s.dbg_syms:
                 if chd.dbg_syms:
                     graph.node(str(id(chd)), label=str(chd.name))
@@ -90,7 +98,9 @@ class ParserSymbol:
 
 
 class Parser:
-    def __init__(self, ast_types):
+    def __init__(self, ast_types, tokens_type=None):
+        if tokens_type:
+            globals()["TOKEN_TYPE"] = tokens_type
         self.attributes_info = ast_types
         self.table: LRtable = LRtable.deserialize("""REPLACE-ME-PARSER""")
 

@@ -1,11 +1,20 @@
 import base64
+import io
 import lzma
 import pickle
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
+
+class TOKEN_TYPE(Enum):
+    pass
 
 
 class Serializable:
+    class Finder(pickle.Unpickler):
+        def find_class(self, __module_name: str, __global_name: str):
+            return super().find_class(__name__, __global_name)
+
     def get_serial_str(self) -> str:
         compressor = lzma.LZMACompressor()
         serial = pickle.dumps(self, fix_imports=True)
@@ -19,7 +28,8 @@ class Serializable:
         decompressor = lzma.LZMADecompressor()
         serial = base64.b85decode(serial)
         serial = decompressor.decompress(serial)
-        table = pickle.loads(serial, fix_imports=True)
+        pickler = Serializable.Finder(io.BytesIO(serial))
+        table = pickler.load()
         return table
 
 
@@ -27,7 +37,7 @@ class Serializable:
 class Token:
     name: str
     lexeme: str
-    type: str
+    extra: str
     line: int
     column: int
 
@@ -61,7 +71,9 @@ class LexerTable(list, Serializable):
 
 
 class Lexer:
-    def __init__(self, match_provider: MatchProvider):
+    def __init__(self, match_provider: MatchProvider,tokens_type= None):
+        if tokens_type:
+            globals()["TOKEN_TYPE"] = tokens_type
         self.table: LexerTable = LexerTable.deserialize("""REPLACE-ME-LEXER""")
         self.matcher: MatchProvider = match_provider
         for t in self.table:
