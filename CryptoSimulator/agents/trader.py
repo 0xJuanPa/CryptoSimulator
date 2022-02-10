@@ -12,4 +12,4 @@ class TraderGenericTemplate:
 
 class TraderGeneticTemplate(TraderGenericTemplate):
     def __init__(self,name,*,initial_money):
-        super().__init__()
+        super().__init__(name,initial_money=initial_money)

@@ -2,6 +2,11 @@ from .ast_crypto import *
 from .visitor import *
 
 
+class TrowableReturnContainer(Exception):
+    def __init__(self, value=None):
+        self.value = value
+
+
 class TreeInterpreter:
     def __init__(self, global_context):
         self.global_context: Context = global_context
@@ -12,18 +17,27 @@ class TreeInterpreter:
     def make_managed(self, fun):
         pass
 
-    def make_native(self, fun: FunDef):
+    def make_native(self, fun: FunDef, context=None):
         '''
         returns a python callable objects that wraps managed func for interops
         '''
+        if context is None:
+            context = self.global_context
+
         def wrapper(*args):
-            if len(args) != len(fun.params.elements):
+            if len(args) != len(fun.params.elements if fun.params is not None else []):
                 raise Exception("Runtime Exception diferent param signature")
-            ctx = self.global_context.create_child_context()
-            for identifier, val in zip(fun.params.elements, args):
-                ctx[identifier.name] = val
-            val = fun.interpret(self, ctx)
-            return val
+            child = context.create_child_context()
+            if fun.params:
+                for identifier, val in zip(fun.params.elements, args):
+                    child[identifier.name] = val
+            ret = None
+            try:
+                fun.body.interpret(self, child)
+            except TrowableReturnContainer as retcontainer:
+                ret = retcontainer.value
+            return ret
+
         return wrapper
 
     @visitor
@@ -45,25 +59,29 @@ class TreeInterpreter:
     def interpret(self, node: FunCall, ctx):
         func = node.name.interpret(self, ctx)
         args = []
+        ret = None
         for expr in node.Args.elements:
             val = expr.interpret(self, ctx)
             args.append(val)
-        child = ctx.create_child_context()
-        if isinstance(func,FunDef):
-            for param,value in zip(func.params.elements,args):
+        if isinstance(func, FunDef):
+            child = ctx.create_child_context()
+            for param, value in zip(func.params.elements, args):
                 child[param.name] = value
-            func.body.interpret(child)
-
+            try:
+                func.body.interpret(self, child)
+            except TrowableReturnContainer as retcontainer:
+                ret = retcontainer.value
+            return ret
         else:
-            ret = func(*val)
-
+            ret = func(*args)
+        return ret
 
     @visitor
     def interpret(self, node: BinaryOp, ctx):
         first = node.first.interpret(self, ctx)
         second = node.second.interpret(self, ctx)
         match node.op.lexeme:
-            case "+":
+            case TOKEN_TYPE.PLUS:
                 res = first + second
         return res
 
@@ -81,27 +99,37 @@ class TreeInterpreter:
     def interpret(self, node: If, ctx):
         condition = node.condition.interpret(self, ctx)
         if condition:
-            ret = node.then_body.interpret(self, ctx)
+            node.then_body.interpret(self, ctx)
         elif node.else_body:
-            ret = node.else_body.interpret(self, ctx)
-        return ret
+            node.else_body.interpret(self, ctx)
 
     @visitor
     def interpret(self, node: While, ctx):
         while True:
             condition = node.condition.interpret(self, ctx)
             if condition:
-                ret = node.body.interpret(self, ctx)
+                node.body.interpret(self, ctx)
             else:
                 break
-        return ret
 
     @visitor
-    def interpret(self, node: StatementList):
-        # manage ret here
-        ret = None
+    def interpret(self, node: StatementList, ctx):
         for st in node.elements:
-            pass
+            st.interpret(self, ctx)
+
+    @visitor
+    def interpret(self, node: Ret, ctx):
+        # crafting interpreters nice idea to stop execution flow
+        res = None
+        if node.value:
+            res = node.value.interpret(self, ctx)
+        raise TrowableReturnContainer(res)
+
+    @visitor
+    def interpret(self, node: AttrRes, ctx):
+        instance = ctx[node.parent.name]
+        res = getattr(instance, node.attr.name)
+        return res
 
     @visitor
     def interpret(self, node: Identifier, ctx):

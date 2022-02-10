@@ -1,11 +1,20 @@
 import base64
+import io
 import lzma
 import pickle
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
+
+class TOKEN_TYPE(Enum):
+    pass
 
 
 class Serializable:
+    class Finder(pickle.Unpickler):
+        def find_class(self, __module_name: str, __global_name: str):
+            return super().find_class(__name__, __global_name)
+
     def get_serial_str(self) -> str:
         compressor = lzma.LZMACompressor()
         serial = pickle.dumps(self, fix_imports=True)
@@ -19,7 +28,8 @@ class Serializable:
         decompressor = lzma.LZMADecompressor()
         serial = base64.b85decode(serial)
         serial = decompressor.decompress(serial)
-        table = pickle.loads(serial, fix_imports=True)
+        pickler = Serializable.Finder(io.BytesIO(serial))
+        table = pickler.load()
         return table
 
 
@@ -27,7 +37,7 @@ class Serializable:
 class Token:
     name: str
     lexeme: str
-    type: str
+    extra: str
     line: int
     column: int
 
@@ -61,8 +71,10 @@ class LexerTable(list, Serializable):
 
 
 class Lexer:
-    def __init__(self, match_provider: MatchProvider):
-        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~%@S)Lj5T0S<6OX}TdWhWDT|XN#}($6?%v(qLIhWS_0LW<Ce&NwoPF1MtL`SwmPyo%hYJ8?tEwjNfymP&H42jgykMY5;BYhc`E`iB553JMS8k{Ty+80ANMWh}ve0Rchb4kNzE2g^_jv#s;q_960s1w16~gpgme@oj|_x+$t|e;WadzR*IzrE75S}dNNCSC@q5#Yr%s*J4fZ_9)BcP=fRBfdPEht`mnCM(g8U}4iOyG$Mc+9gjuk0#W=YX$9r6;RZ*?5II~<hI`@%%Qj!Y)b~IT)dIV2(Qu)W`Oa{}2ydE*{35!J7qFlxcQBYV6?IMWEsW3s!Y>JHuy6%~;s7Oj`jzJkGXlUZN_pEFZvcheD0Pjhh23%rCN$IekcJJU717(GZPj%1yp43D1Ah_(NKX1WQQDu2@7^`VZdVLa`D-#x@bm}E!ZJzz7?u;KVI*0oYy@n@;@ZC^$wXo$&tG02}0P?7AIxr4HVQ~(0hPtWMlQtIL{_AYN<w$zvkSOo$$cz1VouxFa$u<S3-HOc9ms`JNBZ~Q}_2p+A__`FEb|^`3W*8tilnW~?$xhnqhiFl3!gFLsJhM?H4}yTae0azWR(YWSgpGg*ZTa3S00Hm=xCQ_K)2%E`vBYQl0ssI200dcD""")
+    def __init__(self, match_provider: MatchProvider,tokens_type= None):
+        if tokens_type:
+            globals()["TOKEN_TYPE"] = tokens_type
+        self.table: LexerTable = LexerTable.deserialize("""{Wp48S^xk9=GL@E0stWa761SMbT8$j-~&nl=3M|l0S<AHB_~Ak$fI4=l@#oZ67EPJr|FQ4m<eF#V(fd%G3sXN+m8xIRd74B!(3;;ohz^~lfE#!u+XP2EqrooS?5C$ST1~LPqglIgO$&7)@otoW^eJ`x)6z1f(zXsV%BA2rtjMxIu!Yt37oWrs$AFSh%VLrpBMQR62b$o_Q2*Bc$Ik{5FMi>8c&Gbng}!q4zOXFt&z0l7Y@5Cb06GJp)sPL5|4}BO}>N^O$tWiLCr;9US$Y%sA*T8d40Wp-{X{>IPbcU_5qwVN(;Wq`rZm@R9=^1aJ9|NcnBCXfLIK~r*uS`UT96zbNv(i)m@T@Z8t9tbrPzsVeLeblzFI@f5TgNWIQi$<qW&2hLzv<csih&FXe=3fc=e_`tvU{6hQ``hT(C-p`dO)8+{)cQoH5eW=F4@ja*?@i~--Mh_dRGG%yQ|K=%QfWn+l1us2sAb5Vz{vkMk*&rqdDKDcJTBX7mz4rpfMQPCRN0RC`S6B@9il|VmaDZ+CQ?NTB)-6M$@dZa>;;d)v`+vG2#@ZWx?-X{a~69w50Y&D-Ks7yqt?AYR58mVk8lqa^OLPM7I0Ok9A<Tc)AWj{6N-vPUu58fsQlPa!aSYPeU?<j^20=BJo)c^nhZ9am`Tr~=^00Dvo%LV`dd(v#cvBYQl0ssI200dcD""")
         self.matcher: MatchProvider = match_provider
         for t in self.table:
             if t[0] != self.table.eof_symbol:

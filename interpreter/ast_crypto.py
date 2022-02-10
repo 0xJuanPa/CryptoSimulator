@@ -237,6 +237,13 @@ class Context(dict):
             return item in self.parentctx
         return False
 
+    def __getitem__(self, item):
+        if super().__contains__(item):
+            return super().__getitem__(item)
+        elif self.parentctx is not None:
+            return self.parentctx[item]
+        raise KeyError("Not defined in context")
+
     def create_child_context(self):
         ctx = Context(self)
         return ctx

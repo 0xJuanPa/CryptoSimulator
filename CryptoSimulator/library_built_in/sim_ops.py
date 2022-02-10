@@ -1,5 +1,6 @@
 import random
 
+
 def pick_cheaper_coin(wallet):
     '''
     returns the cheaper coin
@@ -9,18 +10,19 @@ def pick_cheaper_coin(wallet):
         pass
 
 
-
 def pick_expensier_coin(wallet):
     '''
     returns the expensier coin
     '''
 
+
 def pick_random_coin(wallet):
     '''
     returns a random coin
     '''
-    res = random.choice(wallet)
+    res = random.choice(wallet) if len(wallet) else 0
     return res
+
 
 def get_with_more_utility(my):
     '''
@@ -28,21 +30,20 @@ def get_with_more_utility(my):
     '''
     pass
 
-def buy(my,coin,amount):
+
+def buy(my, coin, amount):
     pass
 
 
-def sell(my,coin,amount):
+def sell(my, coin, amount):
     my.money += coin.value * amount
     my.wallet.remove(coin)
-
 
 
 def leave(my):
     '''
     sells all coins and abandon the simulation
     '''
-    for amount,coin in my.wallet:
-        sell(my,coin,amount)
+    for amount, coin in my.wallet:
+        sell(my, coin, amount)
     return
-

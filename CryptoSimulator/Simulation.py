@@ -8,6 +8,7 @@ class Simulation:
     def __init__(self):
         self.wallet = list()
         self.traders = list()
+        self.time = 0
 
     def load(self, filepath):
         simulation_file = open(filepath)
@@ -32,14 +33,14 @@ class Simulation:
                 builtins[name] = func
 
         interpr = SimulationInterpreter(builtins, agent_teplates)
-        self.wallet, self.traders = interpr.interpret_simulation(code)
+        self.wallet, self.traders = interpr.interpret_simulation(code,self)
 
     def run(self, endTime):
         current_time = 0
         for trader in self.traders:
             while current_time < endTime:
                 # to run simulation in traders mind it my have to be clonable or inmmutable
-                trader.trade(self.wallet)
+                trader.trade()
                 for coin in self.wallet:
                     coin.updateParameters()
 

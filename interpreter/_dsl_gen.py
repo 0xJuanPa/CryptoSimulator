@@ -10,7 +10,7 @@ eps = dsl.epsilon
 
 # ignored terminals
 lbreak, tab, sl_comment, space = dsl.symbol_emit(("lbreak", "\n|\r\n", True), ("tab", "\t", True),
-                                                 ("sl_comment", "#([^\n\r]*", True), ("space", " ", True))
+                                                 ("sl_comment", "#[^\n\r]*", True), ("space", " ", True))
 
 # groups terminals
 o_par, c_par, o_brack, c_brack, o_brace, c_brace = dsl.symbol_emit(("o_par", r"\("), ("c_par", r"\)"),
@@ -38,7 +38,7 @@ not_ = dsl.symbol_emit(("not", r"!"))
 mul, fdiv, div, mod = dsl.symbol_emit(("mul", r"\*"), ("fdiv", r"//"), ("div", r"/"), ("mod", r"%"))
 
 # binary operatos priority 1
-plus, minus = dsl.symbol_emit(("plus", r"\+"), ("minus", r"\-"))
+plus, minus = dsl.symbol_emit((ast.TOKEN_TYPE.PLUS, r"\+"), ("minus", r"\-"))
 
 # binary operatos priority 2
 or_, and_ = dsl.symbol_emit(("or", r"\|"), ("and", r"&"))
