@@ -29,7 +29,7 @@ def fitness(solution):
     return fitnesval, solution
 
 
-def stopcriteria(solutions):
+def stopcriteria(gen,solutions):
     if (val := next(iter(solutions))[0]) > 1000:
         return next(iter(solutions))[1]
     print(val)
@@ -55,9 +55,6 @@ def recombination(solutions):
         new_gen.append(new1)
         new_gen.append(new2)
 
-    # import pprint
-    # print("\n-----------------------------\n")
-    # pprint.pprint(new_gen)
     return new_gen
 
 

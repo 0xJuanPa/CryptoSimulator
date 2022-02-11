@@ -1,3 +1,6 @@
+import inspect
+from typing import List
+
 from .ast_crypto import *
 from .visitor import *
 
@@ -22,9 +25,9 @@ class TreeInterpreter:
             context = self.global_context
 
         def wrapper(*args):
-            if len(args) != len(fun.params.elements if fun.params is not None else []):
+            if len(args) != len(fun.params.elements):
                 raise Exception("Runtime Exception diferent param signature")
-            child = context.create_child_context() # my with be a level up in contexts
+            child = context.create_child_context()  # "my" with be a level up in contexts
             if fun.params:
                 for identifier, val in zip(fun.params.elements, args):
                     child[identifier.name] = val
@@ -60,6 +63,7 @@ class TreeInterpreter:
         for expr in node.Args.elements:
             val = expr.interpret(self, ctx)
             args.append(val)
+
         if isinstance(func, FunDef):
             child = ctx.create_child_context()
             for param, value in zip(func.params.elements, args):
@@ -70,7 +74,14 @@ class TreeInterpreter:
                 ret = retcontainer.value
             return ret
         else:
-            ret = func(*args)
+            params: List[inspect.Parameter] = list(inspect.signature(func).parameters.values())
+            kw = set(map(lambda p: p.name, filter(lambda p: p.kind == inspect.Parameter.KEYWORD_ONLY, params)))
+            kwargs = dict()
+            if "my" in kw:
+                kwargs["my"] = ctx[TOKEN_TYPE.MY_KW]
+            if "market" in kw:
+                kwargs["market"] = ctx[TOKEN_TYPE.MARKET_KW]
+            ret = func(*args,**kwargs)
         return ret
 
     @visitor
@@ -81,7 +92,9 @@ class TreeInterpreter:
             case TOKEN_TYPE.PLUS:
                 res = first + second
             case TOKEN_TYPE.AND:
-                res = first & second
+                res = 1 if bool(first) and bool(second) else 0
+            case TOKEN_TYPE.FLOORDIV:
+                res = first // second
             case _:
                 raise Exception("??")
         return res
@@ -93,7 +106,7 @@ class TreeInterpreter:
             case TOKEN_TYPE.MINUS:
                 res = -first
             case TOKEN_TYPE.NOT:
-                res = ~first
+                res = 0 if bool(first) else 1
             case _:
                 raise Exception("??")
         return res
@@ -140,7 +153,6 @@ class TreeInterpreter:
         return res
 
     @visitor
-    def interpret(self, node: Literal, ctx):
+    def interpret(self, node: Literal, ctx=None):
         res = node.value
         return res
-

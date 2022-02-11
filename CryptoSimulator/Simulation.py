@@ -5,15 +5,17 @@ from interpreter import SimulationInterpreter
 
 
 class Simulation:
-    def __init__(self):
-        self.wallet = list()
-        self.traders = list()
+    def __init__(self, endtime):
+        self.wallet : list = []
+        self.traders : list = []
         self.time = 0
+        self.end_time = endtime
 
     def load(self, filepath):
         simulation_file = open(filepath)
         code = simulation_file.read()
         simulation_file.close()
+
         # TODO add builtins by reflection
         from agents import coin as coins
         from agents import trader as traders
@@ -33,12 +35,15 @@ class Simulation:
                 builtins[name] = func
 
         interpr = SimulationInterpreter(builtins, agent_teplates)
-        self.wallet, self.traders = interpr.interpret_simulation(code,self)
+        self.wallet, self.traders = interpr.interpret_simulation(code, self)
 
-    def run(self, endTime):
+    def run(self):
         current_time = 0
-        for trader in self.traders:
-            while current_time < endTime:
+        traders = list(self.traders)
+        for trader in traders:
+            trader.initialize(self)
+        for trader in traders:
+            while current_time < self.end_time:
                 # to run simulation in traders mind it my have to be clonable or inmmutable
                 trader.trade()
                 for coin in self.wallet:
@@ -46,6 +51,6 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    s = Simulation()
+    s = Simulation(1000)
     s.load("./SimulationCode.sim")
-    s.run(1000)
+    s.run()

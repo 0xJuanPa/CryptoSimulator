@@ -61,10 +61,10 @@ class SemanticStaticChecker:
         '''
         Checkeo de los agentes creamos los agentes segun sus tipos y opciones
         '''
-        if node.name in self.built_ins:
+        if node.name.name in self.built_ins:
             raise Exception("Cant use built in name")
 
-        if node.name in ctx:
+        if node.name.name in ctx:
             raise Exception("Agent Already Defined")
 
         if node.subtype.name not in self.agents_subtypes:
@@ -82,15 +82,18 @@ class SemanticStaticChecker:
 
         defined = set()
         for beahvior in node.behavior_list.elements:
-            beahvior: FunDef
-            if beahvior.params:
+            beahvior: BehaviorDef
+            if beahvior.name.name in defined:
+                raise Exception("Redefining defined behavior")
+            if len(beahvior.params.elements):
                 raise Exception("Behaviors not allowed to have args")
             if beahvior.name.name not in self.agents_subtypes[node.subtype.name][1]:
                 raise Exception("Unknown Behavior Impemented")
-            if beahvior.name.name in defined:
-                raise Exception("Redefining defined behavior")
-            defined.add(beahvior.name)
-            beahvior.s_check(self, ctx)
+            if beahvior.name.name in self.built_ins:
+                raise Exception("Invalid params, cant use built in name")
+            child = ctx.create_child_context()
+            beahvior.body.s_check(self, child)
+            defined.add(beahvior.name.name)
 
     @visitor
     def s_check(self, node: FunDef, ctx: Context):
@@ -101,7 +104,7 @@ class SemanticStaticChecker:
         if node.name.name in self.built_ins:
             raise Exception("Invalid params, cant use built in param")
         child = ctx.create_child_context()
-        if node.params is not None:
+        if len(node.params.elements):
             node.params.s_check(self, child)
         node.body.s_check(self, child)
 
@@ -110,7 +113,7 @@ class SemanticStaticChecker:
         '''
         Los nombres de variables y funciones si se comparten pq las funciones podrian ser 1st class citizen
         '''
-        if isinstance(node.left,AttrRes):
+        if isinstance(node.left, AttrRes):
             return
         elif node.left.name in self.built_ins:
             raise Exception("Invalid params, cant use built in param")
@@ -180,9 +183,5 @@ class SemanticStaticChecker:
         pass
 
     @visitor
-    def s_check(self, node: String, ctx):
-        pass
-
-    @visitor
-    def s_check(self, node: Number, ctx):
+    def s_check(self, node: Literal, ctx):
         pass

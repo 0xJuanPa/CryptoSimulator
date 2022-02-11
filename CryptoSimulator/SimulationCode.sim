@@ -1,4 +1,4 @@
-coin InverseCoin : CoinGenericTemplate [initial_miners=5,initial_value=100]
+coin InverseCoin : CoinGenericTemplate [initial_miners=5,initial_value=200]
 {
 # Inverse coin
 update_parameters
@@ -131,6 +131,6 @@ trade
 
 func fluctuation() {
 
-ret ;
+ret Uniform(0,1) ;
 
 }

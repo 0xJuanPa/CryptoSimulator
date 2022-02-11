@@ -12,8 +12,7 @@ def fitnessfunc(solution):
     '''
     Evaluate the quality of the solution
     '''
-    res = obj(solution)
-
+    pass
 
 def selectionfunc(selection):
     '''
@@ -26,7 +25,7 @@ def recombinationfunc(elems):
     '''
     crossover or random pick
     '''
-
+    pass
 
 def mutationfunc():
     '''
@@ -35,7 +34,7 @@ def mutationfunc():
     pass
 
 
-def stopcriteria():
+def stopcriteria(gen,solutions):
     '''
     it may be good enough or time or iterations
     '''
@@ -50,7 +49,7 @@ def genetic_flow(populatefunc, fitnessfunc, stopcriteriafunc, selectionfunc, rec
         i+=1
         ranked : List[Tuple[float,Any]] = list(map(fitnessfunc, elem))
         ranked = sorted(ranked, key=lambda x: x[0],reverse=True)
-        if best := stopcriteriafunc(ranked):
+        if best := stopcriteriafunc(i,ranked):
             return best
         select = selectionfunc(ranked)
         select = list(map(lambda s:s[1],select))

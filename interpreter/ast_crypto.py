@@ -84,7 +84,7 @@ class BinaryAtom(Atom, ABC):
 
 
 class PList:
-    def __init__(self, plist, elem=None):
+    def __init__(self, plist=None, elem=None):
         self.elements = []
         if isinstance(plist, PList):
             self.elements.extend(plist.elements)
@@ -120,7 +120,7 @@ class Literal(Expression):
     def __init__(self, value: Token):
         match value.name:
             case TOKEN_TYPE.NUMBER:
-                val = float(value.lexeme) if "," in value.lexeme else int(value.lexeme)
+                val = float(value.lexeme) if "." in value.lexeme else int(value.lexeme)
             case TOKEN_TYPE.STRING:
                 val = value.lexeme
             case _:
@@ -128,7 +128,10 @@ class Literal(Expression):
         self.value = val
 
 
+@dataclass
 class Identifier(Expression):
+    name: str | TOKEN_TYPE
+
     def __init__(self, name):
         self.name = name.lexeme
 
@@ -141,7 +144,7 @@ class UnmanagedType(Expression):
 @dataclass
 class FunCall(Expression):
     name: Identifier
-    Args: ExpresionList = None
+    Args: ExpresionList
 
 
 @dataclass
@@ -214,7 +217,12 @@ class AgentDec(TopLevelSt):
 class FunDef(TopLevelSt):
     name: Identifier
     body: StatementList
-    params: ArgList = None
+    params: ArgList
+
+
+class BehaviorDef(FunDef):
+    def __init__(self,name,body):
+        super(BehaviorDef, self).__init__(name,body,PList())
 
 
 class Simulation(Atom):

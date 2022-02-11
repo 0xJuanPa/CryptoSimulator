@@ -126,7 +126,7 @@ EntDec > Entkwgrp + Identifier + ddot + Identifier + Opts + o_brace + BehaviorLi
 
 Opts > o_brack + OptsList + c_brack / (1,)
 
-Behavior > Identifier + Body / (ast.FunDef, (0, 1))
+Behavior > Identifier + Body / (ast.BehaviorDef, (0, 1))
 
 FunDef > funkw + Identifier + o_par + ArgList + c_par + Body / (ast.FunDef, (1, 5, 3))
 
@@ -135,7 +135,7 @@ OptsList > OptsList + comma + Assign / (ast.OptList, (0, 2)) \
 
 ExpressionList > ExpressionList + comma + Expr / (ast.ExpresionList, (0, 2)) \
 | Expr / (ast.ExpresionList,) \
-| eps
+| eps / (ast.ExpresionList,)
 
 BehaviorList > BehaviorList + Behavior / (ast.PList, (0, 1)) \
 | Behavior / (ast.PList,)
@@ -191,8 +191,8 @@ Factor > o_par + Expr + c_par / (1,) \
 | Atom  # throw up
 
 Atom > Identifier \
-| string / (ast.String,) \
-| num / (ast.Number,) \
+| string / (ast.Literal,) \
+| num / (ast.Literal,) \
 | FunCall \
 | AttrResolv \
 | KwResolv + FunCall / (ast.AttrRes, (0, 1))
