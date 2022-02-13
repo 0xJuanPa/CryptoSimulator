@@ -8,5 +8,5 @@ Consta de:
 - Un DSL propio para la simulacion del dominio.
 - Uso de estrategias de IA basadas en meta-heuristicas como algoritmos geneticos.
 
-### Para mas Informacion Refiérase a la Wiki:
+### Para más Información Refiérase a la Wiki:
 https://github.com/0xJuanPa/CryptoSimulator/wiki
