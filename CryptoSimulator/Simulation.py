@@ -73,26 +73,24 @@ class Simulation:
             trader.wallet.clear()
 
     def run(self):
-        # self.visualize_coins()
-        self.wallet[2].update_parameters()
-        traders = list(self.traders)[3:4]
+        traders = list(self.traders)[2:3]
         for trader in traders:
             trader.initialize()
         while self.time < self.end_time:
+            for coin in self.wallet:
+                coin.update_parameters()
+
             for trader in traders:
                 if trader not in self.leaved:
                     trader.trade()
-
-            for coin in self.wallet:
-                coin.update_parameters()
             self.time += 10
 
         for trader in traders:
-            if trader not in self.leaved:
-                try:
-                    leave(my=trader, market=self)
-                except:
-                    pass
+            try:
+                leave(my=trader, market=self)
+            except:
+                pass
+        # self.visualize_coins()
 
 
 if __name__ == "__main__":

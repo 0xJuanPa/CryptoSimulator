@@ -2,12 +2,24 @@ import random
 
 from interpreter.tree_interpreter import TrowableReturnContainer
 
+def dummy(func):
+    # just for testing interops this will receive a managed function
+    res = func(5, 6)
+    print(f"called managed func, res {res}")
+
+
 
 def say(str):
+    '''
+    alias for python print
+    '''
     print(str)
 
 
 def pick_coin(idx, wallet):
+    '''
+    picks a coin given an 1-based index
+    '''
     wallet = list(wallet.keys()) if isinstance(wallet, dict) else wallet
     return wallet[idx - 1]
 
@@ -52,12 +64,6 @@ def get_with_more_utility(*, my):
     return max[0] if max else 0
 
 
-def dummy(func):
-    # just for testing interops
-    res = func(5, 6)
-    print("called")
-
-
 def buy(coin, amount=None, *, my, market):
     if amount is None:
         amount = random.uniform(0, my.money)
@@ -73,11 +79,16 @@ def buy(coin, amount=None, *, my, market):
     else:
         my.wallet[coin] = (purchased, coin.value, market.time)
     my.money -= amount
+    if my.money < 0.001:
+        my.money = 0  # avoid numerical errors on iee754 double
     if market.verbose:
         print(msg + f" -> {my.money} , {my.wallet}")
 
 
 def sell(coin, amount=None, *, my, market):
+    """
+    sells an amount of the coin in wallet if not amount is supplied then it will take one randomply
+    """
     if amount is None:
         amount = random.uniform(0, my.wallet[coin][0])
     if amount == "all":

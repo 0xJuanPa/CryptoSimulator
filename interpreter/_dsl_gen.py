@@ -51,8 +51,9 @@ identifier, string, num = dsl.symbol_emit((ast.TOKEN_TYPE.IDENTIFIER, r"[A-Za-z]
 not_ = dsl.symbol_emit((ast.TOKEN_TYPE.NOT, r"!"))
 
 # binary operatos priority 0
-exp,mul, mod, fdiv, div, = dsl.symbol_emit((ast.TOKEN_TYPE.EXP, r"\^"), (ast.TOKEN_TYPE.MUL, r"\*"), (ast.TOKEN_TYPE.MOD, r"%"),
-                                           (ast.TOKEN_TYPE.FLOORDIV, r"//"), (ast.TOKEN_TYPE.DIV, r"/"), )
+exp, mul, mod, fdiv, div, = dsl.symbol_emit((ast.TOKEN_TYPE.EXP, r"\^"), (ast.TOKEN_TYPE.MUL, r"\*"),
+                                            (ast.TOKEN_TYPE.MOD, r"%"),
+                                            (ast.TOKEN_TYPE.FLOORDIV, r"//"), (ast.TOKEN_TYPE.DIV, r"/"), )
 
 # binary operatos priority 1
 plus, minus = dsl.symbol_emit((ast.TOKEN_TYPE.PLUS, r"\+"), (ast.TOKEN_TYPE.MINUS, r"\-"))
@@ -87,7 +88,7 @@ StatementList, Statement, Body = dsl.symbol_emit(*"StatementList,Statement,Body"
 If, While, Ret = dsl.symbol_emit(*"If,While,Ret".split(","))
 
 # Non Terminals for Expressions
-Expr, ExpressionList, CmpExpr, ArithExpr, Term, Factor,Exp, Atom = dsl.symbol_emit(
+Expr, ExpressionList, CmpExpr, ArithExpr, Term, Factor, Exp, Atom = dsl.symbol_emit(
     *"Expr,ExpressionList,CmpExpr,ArithExpr,Term,Factor,Exp,Atom".split(","))
 
 FunDef, ArgList, FunCall = dsl.symbol_emit(*"FunDef,Args,FunCall".split(","))
@@ -98,7 +99,7 @@ Assign, AttrResolv = dsl.symbol_emit(*"Assign,AttrResolv".split(","))
 Identifier = dsl.symbol_emit(*"Identifier".split(","))
 
 # Shorthands for operators
-Op_prec0, Op_prec1, Op_prec2, Op_prec3, Op_prec4,Op_prec5 = dsl.symbol_emit(
+Op_prec0, Op_prec1, Op_prec2, Op_prec3, Op_prec4, Op_prec5 = dsl.symbol_emit(
     *"Op_prec0,Op_prec1,Op_prec2,Op_prec3,Op_prec4,Op_prec5".split(","))
 
 # Production Rules BNF-Like Form
@@ -190,8 +191,8 @@ Term > Term + Op_prec2 + Factor / (ast.BinaryOp, (0, 2, 1)) \
 Factor > Op_prec1 + Exp / (ast.UnaryOp, (1, 0)) \
 | Exp  # throw up
 
-Exp > Atom + Op_prec0 + Atom / (ast.BinaryOp,(0,2,1)) \
-| Atom # throw up
+Exp > Atom + Op_prec0 + Atom / (ast.BinaryOp, (0, 2, 1)) \
+| Atom  # throw up
 
 Atom > Identifier \
 | o_par + Expr + c_par / (1,) \
@@ -201,7 +202,7 @@ Atom > Identifier \
 | AttrResolv \
 | KwResolv + FunCall / (ast.AttrRes, (0, 1))
 
-AttrResolv > KwResolv +  Identifier / (ast.AttrRes, (0, 1))
+AttrResolv > KwResolv + Identifier / (ast.AttrRes, (0, 1))
 
 FunCall > Identifier + o_par + ExpressionList + c_par / (ast.FunCall, (0, 2))
 

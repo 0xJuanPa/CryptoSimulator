@@ -60,14 +60,14 @@ class TraderGeneticTemplate(TraderGenericTemplate):
                 market.time += chunks
                 for c in market.wallet:
                     c.update_parameters()
-            market.reset()
             fitnesval = my.money
+            market.reset()
             return fitnesval, solution
 
         def stopcriteria(gen, solutions):
             if gens == gen:
-                sol = next(iter(solutions))[1]
-                print("Optimization completed")
+                fit,sol = next(iter(solutions))
+                print(f"Optimization completed {fit}")
                 for attr, val in zip(my.optimized_attrs, sol):
                     setattr(my, attr, val)
                     print(f"{attr}={val}")
@@ -80,7 +80,7 @@ class TraderGeneticTemplate(TraderGenericTemplate):
             return newsel
 
         def recombination(solutions):
-            # crossover strategy
+            # crossover strategy middle point
             new_gen = []
             for _ in range(my.population_size // 2):
                 sol1 = random.choice(solutions)
