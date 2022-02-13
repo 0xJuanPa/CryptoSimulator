@@ -28,7 +28,7 @@ class TOKEN_TYPE(Enum):
 
     PLUS = auto()
     MINUS = auto()
-    MULT = auto()
+    MUL = auto()
     MOD = auto()
     FLOORDIV = auto()
     DIV = auto()
@@ -46,6 +46,7 @@ class TOKEN_TYPE(Enum):
 
     NOT = auto()
     NEG = auto()
+    EXP = auto()
 
     NUMBER = auto()
     STRING = auto()
@@ -122,7 +123,7 @@ class Literal(Expression):
             case TOKEN_TYPE.NUMBER:
                 val = float(value.lexeme) if "." in value.lexeme else int(value.lexeme)
             case TOKEN_TYPE.STRING:
-                val = value.lexeme
+                val = value.lexeme[1:-1]
             case _:
                 raise Exception("Not supported literal")
         self.value = val
@@ -257,4 +258,8 @@ class Context(dict):
 
     def create_child_context(self):
         ctx = Context(self)
+        return ctx
+
+    def create_same_level_context(self):
+        ctx = Context(self.parentctx)
         return ctx

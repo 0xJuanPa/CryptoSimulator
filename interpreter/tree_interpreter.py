@@ -53,7 +53,11 @@ class TreeInterpreter:
     @visitor
     def interpret(self, node: Assign, ctx):
         res = node.value.interpret(self, ctx)
-        ctx[node.left.name] = res
+        if isinstance(node.left, AttrRes):
+            instance = ctx[node.left.parent.name]
+            setattr(instance, node.left.attr.name, res)
+        else:
+            ctx[node.left.name] = res
 
     @visitor
     def interpret(self, node: FunCall, ctx):
@@ -63,25 +67,29 @@ class TreeInterpreter:
         for expr in node.Args.elements:
             val = expr.interpret(self, ctx)
             args.append(val)
-
         if isinstance(func, FunDef):
-            child = ctx.create_child_context()
+            same_level = ctx.create_same_level_context()
             for param, value in zip(func.params.elements, args):
-                child[param.name] = value
+                same_level[param.name] = value
             try:
-                func.body.interpret(self, child)
+                func.body.interpret(self, same_level)
             except TrowableReturnContainer as retcontainer:
                 ret = retcontainer.value
             return ret
         else:
-            params: List[inspect.Parameter] = list(inspect.signature(func).parameters.values())
-            kw = set(map(lambda p: p.name, filter(lambda p: p.kind == inspect.Parameter.KEYWORD_ONLY, params)))
-            kwargs = dict()
-            if "my" in kw:
-                kwargs["my"] = ctx[TOKEN_TYPE.MY_KW]
-            if "market" in kw:
-                kwargs["market"] = ctx[TOKEN_TYPE.MARKET_KW]
-            ret = func(*args,**kwargs)
+          ret = self.native_call(func,args,ctx)
+        return ret
+
+    def native_call(self,func,args,ctx):
+        params: List[inspect.Parameter] = list(inspect.signature(func).parameters.values())
+        kw = set(map(lambda p: p.name, filter(lambda p: p.kind == inspect.Parameter.KEYWORD_ONLY, params)))
+        args = [self.make_native(x) if isinstance(x, FunDef) else x for x in args]
+        kwargs = dict()
+        if "my" in kw:
+            kwargs["my"] = ctx[TOKEN_TYPE.MY_KW]
+        if "market" in kw:
+            kwargs["market"] = ctx[TOKEN_TYPE.MARKET_KW]
+        ret = func(*args, **kwargs)
         return ret
 
     @visitor
@@ -91,12 +99,36 @@ class TreeInterpreter:
         match node.op:
             case TOKEN_TYPE.PLUS:
                 res = first + second
-            case TOKEN_TYPE.AND:
-                res = 1 if bool(first) and bool(second) else 0
+            case TOKEN_TYPE.MINUS:
+                res = first - second
+            case TOKEN_TYPE.MUL:
+                res = first * second
+            case TOKEN_TYPE.DIV:
+                res = first / second
             case TOKEN_TYPE.FLOORDIV:
                 res = first // second
+            case TOKEN_TYPE.MOD:
+                res = first % second
+            case TOKEN_TYPE.EXP:
+                res = first ** second
+            case TOKEN_TYPE.EQ:
+                res = first == second
+            case TOKEN_TYPE.NEQ:
+                res = first != second
+            case TOKEN_TYPE.AND:  # and / or no short circuit may have to evaluate second inside this if one not shorts
+                res = 1 if bool(first) and bool(second) else 0
+            case TOKEN_TYPE.OR:
+                res = 1 if bool(first) or bool(second) else 0
+            case TOKEN_TYPE.GT:
+                res = 1 if first > second else 0
+            case TOKEN_TYPE.GE:
+                res = 1 if first >= second else 0
+            case TOKEN_TYPE.LT:
+                res = 1 if first < second else 0
+            case TOKEN_TYPE.LE:
+                res = 1 if first <= second else 0
             case _:
-                raise Exception("??")
+                raise Exception("Operator not implemented")
         return res
 
     @visitor
@@ -108,7 +140,7 @@ class TreeInterpreter:
             case TOKEN_TYPE.NOT:
                 res = 0 if bool(first) else 1
             case _:
-                raise Exception("??")
+                raise Exception("Operator not implemented")
         return res
 
     @visitor
@@ -144,7 +176,15 @@ class TreeInterpreter:
     @visitor
     def interpret(self, node: AttrRes, ctx):
         instance = ctx[node.parent.name]
-        res = getattr(instance, node.attr.name)
+        if isinstance(node.attr, Identifier):
+            res = getattr(instance, node.attr.name)
+        elif isinstance(node.attr, FunCall):
+            func = getattr(type(instance), node.attr.name.name)
+            args =[]
+            for expr in node.attr.Args.elements:
+                val = expr.interpret(self, ctx)
+                args.append(val)
+            res = self.native_call(func, args, ctx)
         return res
 
     @visitor

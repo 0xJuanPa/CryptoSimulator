@@ -1,52 +1,84 @@
-coin InverseCoin : CoinGenericTemplate [initial_miners=5,initial_value=200]
+
+
+func sum(x,y){
+if y == 0 {
+ret x;
+}
+ret sum(x+1,y-1);
+}
+
+
+func frenzy(func,wallet){
+    while my.money {
+        coin_ = pick_random_coin(wallet);
+        func(coin_);
+    }
+}
+
+func fluctuation() {
+# inherted my from caller
+f = my.base_value / Uniform(5,10);
+ret Uniform(-f,f) ;
+}
+
+coin DecreasingCoin : CoinGenericTemplate [initial_miners=5,base_value=200]
 {
 # Inverse coin
 update_parameters
 {
-my.value = my.initial_value // market.time  + fluctuation();
+# lineal inverse grow
+completed =  market.time/market.end_time;
+my.value = my.base_value - my.base_value * completed  + fluctuation() + my.base_value/5;
 }
 }
 
 
-coin GrowingCoin : CoinGenericTemplate [initial_miners=10,initial_value=50]
+coin GrowingCoin : CoinGenericTemplate [initial_miners=10,base_value=50]
 {
 update_parameters
 {
-my.value = my.initial_value + market.time  + fluctuation();
+# lineal grow
+completed =  market.time/market.end_time;
+my.value = my.base_value + completed*150  + fluctuation();
 }
 }
 
 
-coin LocalMinimaCoin : CoinGenericTemplate [initial_miners=10,initial_value=50]
+coin LocalMaxCoin : CoinGenericTemplate [initial_miners=10,base_value=50]
 {
 update_parameters
 {
-# TODO add a positive poly with local minmea P(time)
+x =  market.time/market.end_time*9;
 # found this function with polynomial interpolation
-# 0.11*x**5 - 1.75*x**4 + 9.71*x**3 - 23.11*x**2+ 22.09*x - 4.32
-my.value = my.initial_value + market.time  + fluctuation();
+v = -0.0025422340628*x^5+0.0400038888069*x^4-0.0939206522966*x^3-0.8379627327975*x^2+3.2258285026753*x;
+my.value = v*my.base_value + fluctuation();
 }
 }
 
 
 trader RandomTrader : TraderGenericTemplate [initial_money=50]
 {
-# this trader will sell randomly and buy randomly until it get broken or not
+# this reactive trader will sell randomly and buy randomly until it get broken or not
 trade
 {
    coin_sell = pick_random_coin(my.wallet);
    if coin_sell & Bernoulli(0.5)  {
-    sell(coin_sell);
+    sell(coin_sell); # by defaults sells random amounts
    }
    if my.money {
    coin_ = pick_random_coin(market.wallet);
    amount = Uniform(0,my.money) // 1;
+   if amount {
    buy(coin_,amount);
+   } else {
+   say('pass on buy');
+   }
    }
    else {
     if !my.wallet {
         leave();
     }
+    say('almost leaved');
    }
 }
 }
@@ -58,11 +90,11 @@ trader GreedyReactive : TraderGenericTemplate [initial_money=50]
 trade
 {
    expensier_sell = pick_expensier_coin(my.wallet);
-   if expensier_sell & Bernoulli(0.5) {
+   if expensier_sell & Bernoulli(0.2) {
     sell(expensier_sell);
    }
    if my.money {
-   if Bernoulli(0.5) {
+   if Bernoulli(0.4) {
    coin_ = pick_cheaper_coin(market.wallet);
    amount = Uniform(0,my.money) // 1;
    buy(coin_,amount);
@@ -82,14 +114,17 @@ trader GreedyWithKnowlege : TraderGenericTemplate [initial_money=50]
 # this is a greedy trader that keeps track on how much costed to try sell strategy
 trade
 {
-   coin_picked = get_with_more_utility(my.wallet,market.wallet);
+   coin_picked = get_with_more_utility();
    if coin_picked & Bernoulli(0.6) {
-    sell(coin_picked);
+    sell(coin_picked,'all');
    }
    if my.money {
-   coin_ = my.tuned_buy_picker(market.wallet);
+   coin_ = coin_picked; # by this coin that has utility it could be good
+   if !coin_ {
+   coin_ = pick_random_coin(market.wallet);
+   }
    if Bernoulli(0.4){
-   amount = Uniform(0,my.money) // 1;
+   amount = Uniform(0,my.money/2) // 1;
    buy(coin_,amount);
    }
    }
@@ -98,6 +133,20 @@ trade
         leave();
     }
    }
+}
+}
+
+func pick_tuned_coin(){
+total = my.coin1+my.coin2+my.coin3;
+rnd = Uniform(0,total);
+if rnd < my.coin1 {
+ ret pick_coin(1,market.wallet);
+} else {
+if rnd < my.coin1+my.coin2 {
+ ret pick_coin(2,market.wallet);
+}else {
+ret pick_coin(3,market.wallet);
+}
 }
 }
 
@@ -106,16 +155,28 @@ trader IntelliTrader : TraderGeneticTemplate [initial_money=50]
 {
 # this trader initializes itself calculating an aceptable way to invest using Genetic Algorithms
 # we can call this a "reactive" agent
+
+initialize
+{
+my.register_param('tuned_sell');
+my.register_param('tuned_buy');
+my.register_param('coin1');
+my.register_param('coin2');
+my.register_param('coin3');
+my.optimize(50);
+}
+
+
 trade
 {
-   coin_picked = my.tuned_sell_picker();
+   coin_picked = get_with_more_utility();
    if coin_picked & Bernoulli(my.tuned_sell) {
     sell(coin_picked);
    }
    if my.money {
-   coin_ = my.tuned_buy_picker(market.wallet);
+   coin_ = pick_tuned_coin();
    if Bernoulli(my.tuned_buy){
-   amount = my.tuned_amount;
+   amount = Uniform(0,my.money/2) // 1;
    buy(coin_,amount);
    }
    }
@@ -125,12 +186,4 @@ trade
     }
    }
 }
-}
-
-
-
-func fluctuation() {
-
-ret Uniform(0,1) ;
-
 }

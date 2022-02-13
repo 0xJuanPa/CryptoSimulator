@@ -7,57 +7,71 @@ from CryptoSimulator.library_built_in.genetic_meta import genetic_flow
 class TraderGenericTemplate:
 
     def __init__(self, name, *, initial_money):
+        self.name = name
         self.money = initial_money
         self.initial_money = initial_money
         self.wallet: dict[str, int] = dict()
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def __repr__(self):
+        res = f"Trader {self.name} ,money {self.money}"
+        return res
+
     def trade(self):
         pass
 
-    def initialize(self, simulation_scene):
+    def initialize(self):
         pass
 
 
 class TraderGeneticTemplate(TraderGenericTemplate):
-    def __init__(self, name, *, initial_money, generations=30, population_size=20):
+    def __init__(self, name, *, initial_money, population_size=20):
         super().__init__(name, initial_money=initial_money)
-        self.tuned_sell = 0
-        self.tuned_buy = 0
-        self._roulete = list()
-
-        self.generations = generations
         self.population_size = population_size
+        self.optimized_attrs = []
 
-    def tuned_buy_picker(self):
-        pass
+    @staticmethod
+    def register_param(str,*,my):
+        setattr(my, str, 0)
+        my.optimized_attrs.append(str)
 
-    def _elaborate_strategy(self, simulation):
-
+    @staticmethod
+    def optimize(gens, *, market,my):
+        print()
         def populatefunc():
             solutions = []
-            for _ in range(self.population_size):
-                roulette = [random.uniform(0,1)]
-                for _ in range(len(simulation.wallet) - 2):
-                    roulette.append(random.uniform(0, 1-sum(roulette))) # n-1 numbers to split the probability
-                sol = random.uniform(0,1),random.uniform(0,1), roulette
+            for _ in range(my.population_size):
+                sol = [random.uniform(0, 1) for _ in my.optimized_attrs]
                 solutions.append(sol)
             return solutions
 
-
         def fitness(solution):
-            chunks = simulation.end_time // 10
-            while simulation.time < simulation.end_time:
-                self.trade()
-                simulation.time += chunks
-                for c in simulation.coins:
-                    c.updateParameters()
-
-            fitnesval = self.money
+            market.verbose = False
+            chunks = market.end_time // 20
+            for attr, val in zip(my.optimized_attrs, solution):
+                setattr(my, attr, val)
+            while market.time < market.end_time:
+                my.trade()
+                market.time += chunks
+                for c in market.wallet:
+                    c.update_parameters()
+            market.reset()
+            fitnesval = my.money
             return fitnesval, solution
 
         def stopcriteria(gen, solutions):
-            if gen == self.generations:
-                return next(iter(solutions))[1]
+            if gens == gen:
+                sol = next(iter(solutions))[1]
+                print("Optimization completed")
+                for attr, val in zip(my.optimized_attrs, sol):
+                    setattr(my, attr, val)
+                    print(f"{attr}={val}")
+                return sol
             return None
 
         def selection(solutions):
@@ -68,38 +82,28 @@ class TraderGeneticTemplate(TraderGenericTemplate):
         def recombination(solutions):
             # crossover strategy
             new_gen = []
-            for _ in range(self.population_size // 4):
+            for _ in range(my.population_size // 2):
                 sol1 = random.choice(solutions)
                 sol2 = random.choice(solutions)
-                x = sol1[2]
-                y = sol2[2]
-                half = len(x) // 2
+                half = len(sol1) // 2
                 # cross the roulettes
-                new_roulete = x[:half] + y[half:]
-                new_roulete2 = y[:half] + x[half:]
-                new1 = sol1[0] , sol2[1] ,new_roulete
-                new2 = sol2[0] , sol1[1], new_roulete2
-
-                new3 = sol1[0] , sol2[1] ,new_roulete2
-                new4 = sol2[0] , sol1[1], new_roulete
-                new_gen.append(new1)
-                new_gen.append(new2)
-                new_gen.append(new3)
-                new_gen.append(new4)
+                new_sols1 = sol1[:half] + sol2[half:]
+                new_sols2 = sol2[:half] + sol1[half:]
+                new_gen.append(new_sols1)
+                new_gen.append(new_sols2)
             return new_gen
 
         def mutation(solutions):
             mutated = []
             for sol in solutions:
-                buy = sol[0] + random.uniform(-sol[0],sol[0])
-                sell = sol[1] + random.uniform(-sol[1],sol[1])
-                roulette = sol[2]
-                mut = None
+                mut = [x + random.uniform(-0.1, 0.1) for x in sol]
+                for i in range(len(mut)):
+                    if mut[i] < 0:
+                        mut[i] = 0
+                    if mut[i] > 1:
+                        mut[i] = 1
                 mutated.append(mut)
             return mutated
 
         res = genetic_flow(populatefunc, fitness, stopcriteria, selection, recombination, mutation)
-        self._roulete = res
-
-    def initialize(self, simulation_scene):
-        self._elaborate_strategy(simulation_scene)
+        print()

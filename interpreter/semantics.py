@@ -104,6 +104,7 @@ class SemanticStaticChecker:
         if node.name.name in self.built_ins:
             raise Exception("Invalid params, cant use built in param")
         child = ctx.create_child_context()
+        child[node.name.name] = None # for recursion
         if len(node.params.elements):
             node.params.s_check(self, child)
         node.body.s_check(self, child)

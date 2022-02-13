@@ -68,7 +68,7 @@ class Automaton:
                 st.name = self.counter
                 self.counter += 1
             if st in self.states:
-                print('raise ValueError("Overriding State")')
+                # print('Wrn Renamed state Collition')
                 st.name += self.counter
                 self.counter += 1
                 self.add_state(st)

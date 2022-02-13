@@ -51,8 +51,8 @@ identifier, string, num = dsl.symbol_emit((ast.TOKEN_TYPE.IDENTIFIER, r"[A-Za-z]
 not_ = dsl.symbol_emit((ast.TOKEN_TYPE.NOT, r"!"))
 
 # binary operatos priority 0
-mul, mod, fdiv, div, = dsl.symbol_emit((ast.TOKEN_TYPE.MULT, r"\*"), (ast.TOKEN_TYPE.MOD, r"%"),
-                                       (ast.TOKEN_TYPE.FLOORDIV, r"//"), (ast.TOKEN_TYPE.DIV, r"/"), )
+exp,mul, mod, fdiv, div, = dsl.symbol_emit((ast.TOKEN_TYPE.EXP, r"\^"), (ast.TOKEN_TYPE.MUL, r"\*"), (ast.TOKEN_TYPE.MOD, r"%"),
+                                           (ast.TOKEN_TYPE.FLOORDIV, r"//"), (ast.TOKEN_TYPE.DIV, r"/"), )
 
 # binary operatos priority 1
 plus, minus = dsl.symbol_emit((ast.TOKEN_TYPE.PLUS, r"\+"), (ast.TOKEN_TYPE.MINUS, r"\-"))
@@ -87,8 +87,8 @@ StatementList, Statement, Body = dsl.symbol_emit(*"StatementList,Statement,Body"
 If, While, Ret = dsl.symbol_emit(*"If,While,Ret".split(","))
 
 # Non Terminals for Expressions
-Expr, ExpressionList, CmpExpr, ArithExpr, Term, Factor, Atom = dsl.symbol_emit(
-    *"Expr,ExpressionList,CmpExpr,ArithExpr,Term,Factor,Atom".split(","))
+Expr, ExpressionList, CmpExpr, ArithExpr, Term, Factor,Exp, Atom = dsl.symbol_emit(
+    *"Expr,ExpressionList,CmpExpr,ArithExpr,Term,Factor,Exp,Atom".split(","))
 
 FunDef, ArgList, FunCall = dsl.symbol_emit(*"FunDef,Args,FunCall".split(","))
 
@@ -98,8 +98,8 @@ Assign, AttrResolv = dsl.symbol_emit(*"Assign,AttrResolv".split(","))
 Identifier = dsl.symbol_emit(*"Identifier".split(","))
 
 # Shorthands for operators
-Op_prec0, Op_prec1, Op_prec2, Op_prec3, Op_prec4 = dsl.symbol_emit(
-    *"Op_prec0,Op_prec1,Op_prec2,Op_prec3,Op_prec4".split(","))
+Op_prec0, Op_prec1, Op_prec2, Op_prec3, Op_prec4,Op_prec5 = dsl.symbol_emit(
+    *"Op_prec0,Op_prec1,Op_prec2,Op_prec3,Op_prec4,Op_prec5".split(","))
 
 # Production Rules BNF-Like Form
 
@@ -158,7 +158,7 @@ Body > o_brace + StatementList + c_brace / (1,)  # project first
 If > ifkw + Expr + Body / (ast.If, (1, 2)) \
 | ifkw + Expr + Body + elsekw + Body / (ast.If, (1, 2, 4))
 
-While > whilekw + Expr + Body / (ast.While, (1, 3))
+While > whilekw + Expr + Body / (ast.While, (1, 2))
 
 Ret > retkw + Expr / (ast.Ret, (1,)) \
 | retkw / (ast.Ret,)
@@ -168,29 +168,33 @@ Assign > Identifier + assign + Expr / (ast.Assign, (0, 2)) \
 
 # Expression Lang, dont have to elevate operands,parser already elevates them
 # Shorthands for operator precedence
-Op_prec4 > or_ | and_
-Op_prec3 > eq | neq | gt | geq | lt | leq
-Op_prec2 > plus | minus
-Op_prec1 > mul | div | fdiv | mod
-Op_prec0 > minus | not_
+Op_prec5 > or_ | and_
+Op_prec4 > eq | neq | gt | geq | lt | leq
+Op_prec3 > plus | minus
+Op_prec2 > mul | div | fdiv | mod
+Op_prec1 > minus | not_
+Op_prec0 > exp
 
-Expr > Expr + Op_prec4 + CmpExpr / (ast.BinaryOp, (0, 2, 1)) \
+Expr > Expr + Op_prec5 + CmpExpr / (ast.BinaryOp, (0, 2, 1)) \
 | CmpExpr  # throw up
 
-CmpExpr > CmpExpr + Op_prec3 + ArithExpr / (ast.BinaryOp, (0, 2, 1)) \
+CmpExpr > CmpExpr + Op_prec4 + ArithExpr / (ast.BinaryOp, (0, 2, 1)) \
 | ArithExpr  # throw up
 
-ArithExpr > ArithExpr + Op_prec2 + Term / (ast.BinaryOp, (0, 2, 1)) \
+ArithExpr > ArithExpr + Op_prec3 + Term / (ast.BinaryOp, (0, 2, 1)) \
 | Term  # throw up
 
-Term > Term + Op_prec1 + Factor / (ast.BinaryOp, (0, 2, 1)) \
+Term > Term + Op_prec2 + Factor / (ast.BinaryOp, (0, 2, 1)) \
 | Factor  # throw up
 
-Factor > o_par + Expr + c_par / (1,) \
-| Op_prec0 + Atom / (ast.UnaryOp, (1, 0)) \
-| Atom  # throw up
+Factor > Op_prec1 + Exp / (ast.UnaryOp, (1, 0)) \
+| Exp  # throw up
+
+Exp > Atom + Op_prec0 + Atom / (ast.BinaryOp,(0,2,1)) \
+| Atom # throw up
 
 Atom > Identifier \
+| o_par + Expr + c_par / (1,) \
 | string / (ast.Literal,) \
 | num / (ast.Literal,) \
 | FunCall \
