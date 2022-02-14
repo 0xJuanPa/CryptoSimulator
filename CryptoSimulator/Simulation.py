@@ -1,66 +1,78 @@
+import argparse
 import inspect
-from itertools import chain
+import os
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
 
 from CryptoSimulator.library_built_in.sim_ops import leave
 from interpreter import SimulationInterpreter
+from interpreter.tree_interpreter import TrowableReturnContainer
 
 
 class Simulation:
-    def __init__(self, endtime):
+    def __init__(self):
         self.wallet: list = []
         self.traders: list = []
         self.leaved: set = set()
+        self.init_time = 1
         self.time = 1
-        self.end_time = endtime
+        self.end_time = 1
+        self.step_size = 10
         self.verbose = True
 
-    def visualize_coins(self):
-        import numpy as np
+    def set_params(self, coins, traders, *, init_time=1, endtime, step_size=10):
+        self.wallet: list = coins
+        self.traders: list = traders
+        self.leaved: set = set()
+        self.init_time = init_time
+        self.time = init_time
+        self.end_time = endtime
+        self.step_size = step_size
+
+    @staticmethod
+    def _plot(names, values):
+        # https://youtrack.jetbrains.com/issue/PY-52137 time wasted ON DEBUG
         import pandas as pd
         import seaborn as sns
         import matplotlib.pyplot as plt
         sns.set_theme(style="whitegrid")
-
-        times = np.arange(self.time, self.end_time, 20)
-        # https://youtrack.jetbrains.com/issue/PY-52137 time wasted ON DEBUG
-        values = []
-        for t in times:
-            self.time = t
-            arr = []
-            for coin in self.wallet:
-                coin.update_parameters()
-                arr.append(coin.value)
-            values.append(np.array(arr))
-        values = np.array(values)
-        data = pd.DataFrame(values, index=times, columns=list(map(lambda x: x.name, self.wallet)))
+        times, values = map(list, zip(*values))
+        data = pd.DataFrame(values, index=times, columns=names)
         sns.lineplot(data=data)
+        plt.figure()
+
+    @staticmethod
+    def _view():
+        import matplotlib.pyplot as plt
         plt.show()
 
-    def load(self, filepath):
-        simulation_file = open(filepath)
+    @staticmethod
+    def _reflected_load(path, predicate) -> dict:
+        currentdir = os.path.dirname(__file__)
+        agents = Path(os.path.join(currentdir, path)).glob("*.py")
+        loaded = dict()
+        for file in agents:
+            module = SourceFileLoader(str(file), str(file)).load_module()
+            for name, class_ in inspect.getmembers(module, predicate):
+                name: str
+                if not name.startswith("_"):
+                    loaded[name] = class_
+        return loaded
+
+    @staticmethod
+    def load(simulation_file):
+        agent_templates = Simulation._reflected_load("agents", inspect.isclass)
+        builtins = Simulation._reflected_load("library_built_in", inspect.isfunction)
         code = simulation_file.read()
         simulation_file.close()
-
-        # may add builtins by reflection
-        from agents import coin as coins
-        from agents import trader as traders
-        agent_teplates = dict()
-        for name, clas in chain(coins.__dict__.items(), traders.__dict__.items()):
-            name: str
-            if not name.startswith("_"):
-                agent_teplates[name] = clas
-
-        from library_built_in import prob_distributions as prob
-        from library_built_in import sim_ops
-
-        builtins = dict()
-        for name, func in chain(inspect.getmembers(sim_ops, inspect.isfunction),
-                                inspect.getmembers(prob, inspect.isfunction)):
-            if not name.startswith("_"):
-                builtins[name] = func
-
-        interpr = SimulationInterpreter(builtins, agent_teplates)
-        self.wallet, self.traders = interpr.interpret_simulation(code, self)
+        sim_opts = filter(lambda p: p.kind == inspect.Parameter.KEYWORD_ONLY,
+                          inspect.signature(Simulation.set_params).parameters.values())
+        sim_opts = set(map(lambda p: p.name, sim_opts))
+        interpr = SimulationInterpreter(builtins, agent_templates, sim_opts)
+        sim = Simulation()
+        coins, traders, opts = interpr.interpret_simulation(code, sim)
+        sim.set_params(coins, traders, **opts)
+        return sim
 
     def reset(self):
         self.time = 1
@@ -73,27 +85,45 @@ class Simulation:
             trader.wallet.clear()
 
     def run(self):
-        traders = list(self.traders)[2:3]
+        traders = list(self.traders)
         for trader in traders:
             trader.initialize()
+        coins_values = []
+        traders_values = []
         while self.time < self.end_time:
+            c_v = []
             for coin in self.wallet:
                 coin.update_parameters()
-
+                c_v.append(coin.value)
+            coins_values.append((self.time, c_v))
+            t_v = []
             for trader in traders:
                 if trader not in self.leaved:
                     trader.trade()
-            self.time += 10
+                    t_v.append(trader.money)
+            traders_values.append((self.time, t_v))
+            self.time += self.step_size
 
+        coins_name = list(map(lambda x: x.name, self.wallet))
+        Simulation._plot(coins_name, coins_values)
+
+        traders_name = list(map(lambda x: x.name, traders))
+        Simulation._plot(traders_name, traders_values)
+
+        t_v = []
         for trader in traders:
             try:
                 leave(my=trader, market=self)
-            except:
+            except TrowableReturnContainer:
                 pass
-        # self.visualize_coins()
+            t_v.append(trader.money)
+        traders_values.append((self.time, t_v))
+        Simulation._view()
 
 
 if __name__ == "__main__":
-    s = Simulation(1000)
-    s.load("./SimulationCode.sim")
+    argsparser = argparse.ArgumentParser()
+    argsparser.add_argument('file', help="CryptoLang Simulation File", type=argparse.FileType('r'))
+    args = argsparser.parse_args()
+    s = Simulation.load(args.file)
     s.run()

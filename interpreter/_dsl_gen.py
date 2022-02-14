@@ -9,24 +9,27 @@ dsl = Grammar()
 eps = dsl.epsilon
 
 ### EXPLANATION
-# regex engine very limited with no capture groups and lookaheads so I used priority of definition to avoid complexity
-# besides I can "or" all lexeme regexes like "(r)|" and the engine will match greddier I started
+# regex engine very limited with no capture groups and lookaheads so I try match all subregexes to avoid complexity
+# besides I can "or" all lexeme regexes like "(r)|" and the engine will match greddier with a big automaton I started
 # doing it with named groups but I was not satisfied adding match:name just in the content of the state I wanted tags
 # of entry of the group and tags for finish so I may have all prefix subgroups.
 # I couldnt continue to mantain the old impl had to abort it and switch to other topics
 
 
 # general pourpouse keyword terminals
-ifkw, elsekw, whilekw, retkw, funkw = dsl.symbol_emit((ast.TOKEN_TYPE.IF, r"if "), (ast.TOKEN_TYPE.ELSE, r"else "),
-                                                      (ast.TOKEN_TYPE.WHILE, r"while "),
-                                                      (ast.TOKEN_TYPE.RET, r"ret "),
-                                                      (ast.TOKEN_TYPE.FUNC, r"func "))
+ifkw, elsekw, whilekw, retkw, breakkw, funkw = dsl.symbol_emit((ast.TOKEN_TYPE.IF, r"if"),
+                                                               (ast.TOKEN_TYPE.ELSE, r"else"),
+                                                               (ast.TOKEN_TYPE.WHILE, r"while"),
+                                                               (ast.TOKEN_TYPE.RET, r"ret"),
+                                                               (ast.TOKEN_TYPE.BREAK, r"break"),
+                                                               (ast.TOKEN_TYPE.FUNC, r"func"))
 # spec keywords terminals
-traderkw, coinkw, mykw, marketkw = dsl.symbol_emit((ast.TOKEN_TYPE.TRADER_KW, r"trader "),
-                                                   (ast.TOKEN_TYPE.COIN_KW, r"coin "),
-                                                   # if I want them as keywords have to match  dot cause no lookaheads
-                                                   (ast.TOKEN_TYPE.MY_KW, r"my."),
-                                                   (ast.TOKEN_TYPE.MARKET_KW, r"market."))
+traderkw, coinkw, mykw, marketkw, optionskw = dsl.symbol_emit((ast.TOKEN_TYPE.TRADER_KW, r"trader"),
+                                                              (ast.TOKEN_TYPE.COIN_KW, r"coin "),
+                                                              # if I want them as keywords have to match  dot cause no lookaheads
+                                                              (ast.TOKEN_TYPE.MY_KW, r"my"),
+                                                              (ast.TOKEN_TYPE.MARKET_KW, r"market"),
+                                                              (ast.TOKEN_TYPE.OPTS_KW, r"options"))
 
 # ignored terminals
 lbreak, tab, sl_comment, space = dsl.symbol_emit((ast.TOKEN_TYPE.LBREAK, "\n|\r\n", True),
@@ -78,8 +81,8 @@ CryptoDsl = dsl.symbol_emit("CryptoDsl")
 dsl.initial_symbol = CryptoDsl
 
 # Nonterminals for language specs
-TopLevelSt, TopLevelStList, EntDec, Entkwgrp, KwResolv, Opts, OptsList, Behavior, BehaviorList = dsl.symbol_emit(
-    *"TopLevelSt,TopLevelStList,EntDec,Entkwgrp,KwResolv,Opts,OptsList,Behavior,BehaviorList".split(","))
+TopLevelSt, TopLevelStList, EntDec, Entkwgrp, KwResolv, Opts, OptsList, SimOpts, Behavior, BehaviorList = dsl.symbol_emit(
+    *"TopLevelSt,TopLevelStList,EntDec,Entkwgrp,KwResolv,Opts,OptsList,SimOpts,Behavior,BehaviorList".split(","))
 
 # Non Terminals for Statements and Args
 StatementList, Statement, Body = dsl.symbol_emit(*"StatementList,Statement,Body".split(","))
@@ -94,7 +97,7 @@ Expr, ExpressionList, CmpExpr, ArithExpr, Term, Factor, Exp, Atom = dsl.symbol_e
 FunDef, ArgList, FunCall = dsl.symbol_emit(*"FunDef,Args,FunCall".split(","))
 
 # Declaration and Assignation Non Terminal
-Assign, AttrResolv = dsl.symbol_emit(*"Assign,AttrResolv".split(","))
+Assign,AssignResolv, AttrResolv = dsl.symbol_emit(*"Assign,AssignResolv,AttrResolv".split(","))
 
 Identifier = dsl.symbol_emit(*"Identifier".split(","))
 
@@ -106,10 +109,12 @@ Op_prec0, Op_prec1, Op_prec2, Op_prec3, Op_prec4, Op_prec5 = dsl.symbol_emit(
 
 dsl.initial_symbol = CryptoDsl
 
-# Initial Production Augmented Like
-# Tried to follow python philosophy of no epsilon productions but give up
+# Tried to follow python philosophy of no epsilon productions but gave up
 
-CryptoDsl > TopLevelStList / (ast.Simulation,)
+CryptoDsl > SimOpts + TopLevelStList / (ast.Simulation, (1, 0)) \
+| TopLevelStList / (ast.Simulation,)
+
+SimOpts > optionskw + Opts / (1,)
 
 TopLevelStList > TopLevelStList + TopLevelSt / (ast.PList, (0, 1)) \
 | TopLevelSt / (ast.PList,)
@@ -127,12 +132,14 @@ EntDec > Entkwgrp + Identifier + ddot + Identifier + Opts + o_brace + BehaviorLi
 
 Opts > o_brack + OptsList + c_brack / (1,)
 
+OptsList > OptsList + comma + Assign / (ast.OptList, (0, 2)) \
+| Assign / (ast.OptList,) \
+| eps / (ast.OptList,)
+
 Behavior > Identifier + Body / (ast.BehaviorDef, (0, 1))
 
 FunDef > funkw + Identifier + o_par + ArgList + c_par + Body / (ast.FunDef, (1, 5, 3))
 
-OptsList > OptsList + comma + Assign / (ast.OptList, (0, 2)) \
-| Assign / (ast.OptList,)
 
 ExpressionList > ExpressionList + comma + Expr / (ast.ExpresionList, (0, 2)) \
 | Expr / (ast.ExpresionList,) \
@@ -152,7 +159,9 @@ Statement > Expr + semicolon \
 | If \
 | While \
 | Assign + semicolon \
-| Ret + semicolon
+| AssignResolv + semicolon \
+| Ret + semicolon \
+| breakkw + semicolon / (ast.Break,)
 
 Body > o_brace + StatementList + c_brace / (1,)  # project first
 
@@ -164,8 +173,9 @@ While > whilekw + Expr + Body / (ast.While, (1, 2))
 Ret > retkw + Expr / (ast.Ret, (1,)) \
 | retkw / (ast.Ret,)
 
-Assign > Identifier + assign + Expr / (ast.Assign, (0, 2)) \
-| AttrResolv + assign + Expr / (ast.Assign, (0, 2))
+Assign > Identifier + assign + Expr / (ast.Assign, (0, 2))
+
+AssignResolv > AttrResolv + assign + Expr / (ast.Assign, (0, 2))
 
 # Expression Lang, dont have to elevate operands,parser already elevates them
 # Shorthands for operator precedence
@@ -199,10 +209,10 @@ Atom > Identifier \
 | string / (ast.Literal,) \
 | num / (ast.Literal,) \
 | FunCall \
-| AttrResolv \
-| KwResolv + FunCall / (ast.AttrRes, (0, 1))
+| AttrResolv
 
-AttrResolv > KwResolv + Identifier / (ast.AttrRes, (0, 1))
+AttrResolv > KwResolv + dot + Identifier / (ast.AttrRes, (0, 2)) \
+| KwResolv + dot + FunCall / (ast.AttrRes, (0, 2))
 
 FunCall > Identifier + o_par + ExpressionList + c_par / (ast.FunCall, (0, 2))
 

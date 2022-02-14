@@ -3,9 +3,13 @@ import inspect
 from .ast_crypto import *
 from .visitor import visitor
 
+IN_LOOP_FLAG = " i n l o o p"  # impossible identifier flag
+IN_AGENT_BODY = "i n a g e n t"
+
 
 class SemanticStaticChecker:
-    def __init__(self, built_ins, agents_subtypes: dict):
+    def __init__(self, built_ins, agents_subtypes: dict, sim_opts: set):
+        self.sim_opts = sim_opts
         self.built_ins: set[str] = set(built_ins)
         self.agents_subtypes: dict[str, tuple[set[str], set[str]]] = dict()
         for agentype, cls in agents_subtypes.items():
@@ -23,6 +27,9 @@ class SemanticStaticChecker:
 
     @visitor
     def s_check(self, node: Simulation):
+        for opt in node.options.elements:
+            if opt.left.name not in self.sim_opts:
+                raise Exception("Invalid simulation Option")
         for fun in node.funcs:
             fun.s_check(self, self.global_ctx)
             self.global_ctx[fun.name.name] = None
@@ -85,13 +92,12 @@ class SemanticStaticChecker:
             beahvior: BehaviorDef
             if beahvior.name.name in defined:
                 raise Exception("Redefining defined behavior")
-            if len(beahvior.params.elements):
-                raise Exception("Behaviors not allowed to have args")
             if beahvior.name.name not in self.agents_subtypes[node.subtype.name][1]:
                 raise Exception("Unknown Behavior Impemented")
             if beahvior.name.name in self.built_ins:
                 raise Exception("Invalid params, cant use built in name")
             child = ctx.create_child_context()
+            child[IN_AGENT_BODY] = None
             beahvior.body.s_check(self, child)
             defined.add(beahvior.name.name)
 
@@ -104,7 +110,7 @@ class SemanticStaticChecker:
         if node.name.name in self.built_ins:
             raise Exception("Invalid params, cant use built in param")
         child = ctx.create_child_context()
-        child[node.name.name] = None # for recursion
+        child[node.name.name] = None  # for recursion
         if len(node.params.elements):
             node.params.s_check(self, child)
         node.body.s_check(self, child)
@@ -137,15 +143,27 @@ class SemanticStaticChecker:
         Checkeo del while
         '''
         node.condition.s_check(self, ctx)
-        node.body.s_check(self, ctx.create_child_context())
+        child = ctx.create_child_context()
+        child[IN_LOOP_FLAG] = None
+        node.body.s_check(self, child)
 
     @visitor
     def s_check(self, node: Ret, ctx: Context):
         '''
         Checkeo del ret
         '''
+        if IN_AGENT_BODY in ctx and node.value:
+            raise Exception("Agents behaviors cannot have return value")
         if node.value is not None:
             node.value.s_check(self, ctx)
+
+    @visitor
+    def s_check(self, node: Break, ctx: Context):
+        '''
+        Checkeo del break
+        '''
+        if IN_LOOP_FLAG not in ctx:
+            raise Exception("Break outside loop")
 
     @visitor
     def s_check(self, node: FunCall, ctx):

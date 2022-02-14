@@ -224,7 +224,7 @@ class LRitem:
 class Grammar:
     def __init__(self, attribute_encode=None, attribute_apply=None):
         if not isinstance(attribute_encode, Callable):
-            self.attribute_encode = self._attribute_encode
+            self.attribute_encode = Grammar._attribute_encode
         if not isinstance(attribute_apply, Callable):
             self.attribute_apply = self._attribute_apply
         self.eof: EOF = EOF()
@@ -324,7 +324,8 @@ class Grammar:
         newp.write(parser_content)
         newp.close()
 
-    def _attribute_encode(self, attr):
+    @staticmethod
+    def _attribute_encode(attr):
         if attr:
             if len(attr) == 2:
                 cls_name = attr[0].__name__
@@ -338,6 +339,7 @@ class Grammar:
                 raise Exception("Attribute Not Supported")
         return None
 
+    # do not decorate with static method this is just a scaffold
     def _attribute_apply(attribute, popped_syms, info):
         ast_types = info
         if attribute:
@@ -361,15 +363,11 @@ class Grammar:
             instance = popped_syms[0].content if len(popped_syms) else None  # project up
         return instance
 
-    def write_lr1_parser(self, path: str) -> None:
+    def write_lr1_parser(self, path: [str | None] = None) -> None:
         """
         Generates an LR1 Shif-Reduce Parser for the Gramamr using attribute coder and attribute applier supplied or def
+        If no arg is provided visualizes the dfa
         """
-        transition_sym_mapper: Callable[[LRitem], Any] = \
-            lambda it: [] if (ns := it.peek_nxt_symbol()) is None else [ns]
-        state_maker: Callable[[Any], int | Any] = lambda subset: State(None, final=True, content=subset)
-        goto_func = self._get_lr1_goto
-        closure_func = self._get_lr1_closure
         table = LRtable()
         table.initial_symbol = self.initial_symbol.name
 
@@ -378,12 +376,21 @@ class Grammar:
         S0 > self.initial_symbol
         self.initial_symbol = S0
 
+        transition_sym_mapper: Callable[[LRitem], Any] = \
+            lambda it: [] if (ns := it.peek_nxt_symbol()) is None else [ns]
+        state_maker: Callable[[Any], int | Any] = lambda subset: State(None, final=True, content=subset)
+        goto_func = self._get_lr1_goto
+        closure_func = self._get_lr1_closure
         initial_value = [LRitem(next(iter(self.initial_symbol.associated_productions)), lookaheads=[self.eof])]
         dfa = Automaton.powerset_construct(initial_value, goto_func, closure_func, state_maker, transition_sym_mapper)
+
+        if path is None:
+            dfa.view()
+
         table.initial_state = dfa.initial_state.name
         for state in dfa.states:
-            items: Iterable[LRitem] = state.content
-            for item in items:
+            state_content: Iterable[LRitem] = state.content
+            for item in state_content:
                 if item.is_reduce:
                     prod = item.production
                     if prod.left_part == self.initial_symbol:
@@ -392,8 +399,7 @@ class Grammar:
                         for symbol in item.lookaheads:
                             symbol: Symbol
                             attribute = self.attribute_encode(prod.attribute)
-                            right_part_dbg = [s.name for s in prod.right_part] if prod.right_part[
-                                                                                      0] != self.epsilon else []
+                            right_part_dbg = [s.name for s in prod.right_part if s != self.epsilon]
                             reduce_info = ReduceInfo(prod.left_part.name, right_part_dbg, attribute)
                             table.action((state.name, symbol.name), (LRtable.Action.REDUCE, reduce_info))
                 else:
@@ -409,6 +415,7 @@ class Grammar:
         attrib_src = inspect.getsource(self.attribute_apply)
         unindented = inspect.cleandoc(attrib_src).replace("\n", "\n" + " " * 4)
         code = scaffold_cnt.replace("def _attribute_apply(attribute, popped_syms, info): pass", unindented)
+        code = code.replace("_attribute_apply", self.attribute_apply.__name__)
         parser_content = code.replace("REPLACE-ME-PARSER", serial_str)
         out_path = os.path.join(path, "parser.py")
         newp = open(out_path, "w")

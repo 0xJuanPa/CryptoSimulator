@@ -5,7 +5,6 @@ from enum import auto, Enum
 from toolchain.regx_engine.lexer import Token
 
 
-# will wait because enum issue
 class TOKEN_TYPE(Enum):
     # grouppers
     O_PAR = auto()
@@ -53,8 +52,8 @@ class TOKEN_TYPE(Enum):
     IDENTIFIER = auto()
 
     # control statements
-    FOR = auto()  # ?
     WHILE = auto()
+    BREAK = auto()
     IF = auto()
     ELSE = auto()
     RET = auto()
@@ -64,6 +63,7 @@ class TOKEN_TYPE(Enum):
     TRADER_KW = auto()
     MY_KW = auto()
     MARKET_KW = auto()
+    OPTS_KW = auto()
 
 
 @dataclass
@@ -198,6 +198,12 @@ class Ret(Statement):
     value: Expression
 
 
+@dataclass
+class Break(Statement):
+    def __init__(self, dummy):
+        pass
+
+
 ## TOP LEVEL STATEMENTS
 
 
@@ -222,14 +228,15 @@ class FunDef(TopLevelSt):
 
 
 class BehaviorDef(FunDef):
-    def __init__(self,name,body):
-        super(BehaviorDef, self).__init__(name,body,PList())
+    def __init__(self, name, body):
+        super(BehaviorDef, self).__init__(name, body, PList())
 
 
 class Simulation(Atom):
-    def __init__(self, top_level_sts):
+    def __init__(self, top_level_sts, opts=None):
         self.agents = []
         self.funcs = []
+        self.options = opts
         for top in top_level_sts.elements:
             if isinstance(top, FunDef):
                 self.funcs.append(top)

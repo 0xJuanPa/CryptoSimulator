@@ -19,7 +19,7 @@ class TraderGenericTemplate:
         return hash(self) == hash(other)
 
     def __repr__(self):
-        res = f"Trader {self.name} ,money {self.money}"
+        res = f"Trader {self.name} money {self.money}"
         return res
 
     def trade(self):

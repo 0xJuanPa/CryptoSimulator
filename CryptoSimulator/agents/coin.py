@@ -34,7 +34,7 @@ class CoinGenericTemplate:
         return hash(self) == hash(other)
 
     def __repr__(self):
-        res = f"{self.name} miners {self.miners} value {self.value}"
+        res = f"{self.name} value {self.value}"
         return res
 
     def validate(self):

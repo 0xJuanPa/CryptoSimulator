@@ -1,47 +1,6 @@
-# simple tail recursive func
-func sum(x,y){
-if y == 0 {
-ret x;
-}
-ret sum(x+1,y-1);
-}
-
-# functional example of fenzy func the trader who use this will buy or sell
-# until the wallet or money gets emptied
-
-func money(){
-   ret my.money;
-}
-
-func wallet(){
-   ret my.wallet;
-}
-
-func frenzy(funct,stopfunc,wallet){
-    say('frenzy!');
-    while stopfunc() {
-        coin_ = pick_random_coin(wallet);
-        funct(coin_);
-    }
-}
-
-trader TestingTrader : TraderGenericTemplate [initial_money=50]
-{
-# this is a testing Trader
-trade
-{
-# functional interops exaple
-dummy(sum);
-
-
-}
-}
-
-
-
 
 ##### SIMULATION CODE  #####
-
+options [init_time=1,endtime=1000,step_size=10]
 
 func fluctuation() {
 # my inherted my from caller
@@ -56,7 +15,15 @@ update_parameters
 {
 # lineal inverse grow
 completed =  market.time/market.end_time;
-my.value = my.base_value - my.base_value * completed  + fluctuation() + my.base_value/5;
+
+fluct = -Uniform(0,10);
+if market.time > 500
+{
+fluct = fluctuation();
+}
+
+
+my.value = my.base_value - my.base_value * completed + fluct + my.base_value/5;
 }
 }
 
@@ -76,15 +43,15 @@ coin LocalMaxCoin : CoinGenericTemplate [initial_miners=10,base_value=50]
 {
 update_parameters
 {
-x =  market.time/market.end_time*9;
-# found this function with polynomial interpolation
-v = -0.0025422340628*x^5+0.0400038888069*x^4-0.0939206522966*x^3-0.8379627327975*x^2+3.2258285026753*x;
-val = v*my.base_value + fluctuation();
-if val < 0 # this could happen and the beggining with fluctuations as it starts in 0
-{
-val = val*-1;
-}
-my.value = val;
+    x =  market.time/market.end_time*9;
+    # found this function with polynomial interpolation
+    v = -0.0025422340628*x^5+0.0400038888069*x^4-0.0939206522966*x^3-0.8379627327975*x^2+3.2258285026753*x;
+    val = v*my.base_value + fluctuation();
+    if val < 0 # this could happen and the beggining with fluctuations as it starts in 0
+    {
+        val = val*-1;
+    }
+        my.value = val;
 }
 }
 
@@ -123,11 +90,11 @@ trader GreedyReactive : TraderGenericTemplate [initial_money=50]
 trade
 {
    expensier_sell = pick_expensier_coin(my.wallet);
-   if expensier_sell & Bernoulli(0.2) {
+   if expensier_sell & Bernoulli(0.5) {
     sell(expensier_sell);
    }
    if my.money {
-   if Bernoulli(0.4) {
+   if Bernoulli(0.5) {
    coin_ = pick_cheaper_coin(market.wallet);
    amount = Uniform(0,my.money) // 1;
    buy(coin_,amount);
@@ -171,17 +138,17 @@ trade
 }
 
 func pick_tuned_coin(){
-total = my.coin1+my.coin2+my.coin3;
-rnd = Uniform(0,total);
-if rnd < my.coin1 {
- ret pick_coin(1,market.wallet);
-} else {
-if rnd < my.coin1+my.coin2 {
- ret pick_coin(2,market.wallet);
-}else {
-ret pick_coin(3,market.wallet);
-}
-}
+    total = my.coin1+my.coin2+my.coin3;
+    rnd = Uniform(0,total);
+    if rnd < my.coin1 {
+        ret pick_coin(1,market.wallet);
+    } else {
+    if rnd < my.coin1+my.coin2 {
+        ret pick_coin(2,market.wallet);
+    }else {
+        ret pick_coin(3,market.wallet);
+    }
+    }
 }
 
 
@@ -221,3 +188,43 @@ trade
    }
 }
 }
+
+
+####### TESTING FUNCS #######
+
+# simple tail recursive func
+func sum(x,y){
+if y == 0 {
+ret x;
+}
+ret sum(x+1,y-1);
+}
+
+# functional example of fenzy func the trader who use this will buy or sell
+# until the wallet or money gets emptied
+
+func money(){
+   ret my.money;
+}
+
+func wallet(){
+   ret my.wallet;
+}
+
+func frenzy(funct,stopfunc,wallet){
+    say('frenzy!');
+    while stopfunc() {
+        coin_ = pick_random_coin(wallet);
+        funct(coin_);
+    }
+}
+
+# trader TestingTrader : TraderGenericTemplate [initial_money=50]
+# {
+# # this is a testing Trader
+# trade
+# {
+# # functional interops exaple
+# dummy(sum);
+# }
+# }

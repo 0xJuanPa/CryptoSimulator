@@ -28,19 +28,21 @@ class RegxMatcher(MatchProvider):
                 self.compiled.append((name, pattern))
 
     def match(self, input_str, pos) -> tuple[str | None, str | None, str | None]:
-        name = None
-        match = None
+        final_name = None
+        final_match = ""
         for name, matcher in self.compiled:
             match = matcher.match(input_str, pos)
-            if match:
-                break
-        t_type = self.matchers[name][1]
-        return (name, match, t_type) if match else (None, None, None)
+            if match and len(match) > len(final_match):
+                final_match = match # go greedy temp fix
+                final_name = name
+        t_type = self.matchers[final_name][1]
+        return (final_name, final_match, t_type) if final_match else (None, None, None)
 
 
 class SimulationInterpreter:
-    def __init__(self, built_ins, agent_templates):
+    def __init__(self, built_ins, agent_templates,sim_opts):
         self.built_ins: dict = built_ins
+        self.sim_opts : set = sim_opts
         self.agent_templates: dict = agent_templates
         self.lexer = Lexer(RegxMatcher(), ast.TOKEN_TYPE)
         self.parser = Parser(ast, ast.TOKEN_TYPE)
@@ -51,12 +53,9 @@ class SimulationInterpreter:
         '''
         tokens = self.lexer(prog)
         simulation: ast.Simulation = self.parser(tokens)
-        static_checks = SemanticStaticChecker(self.built_ins.keys(), self.agent_templates)
+        static_checks = SemanticStaticChecker(self.built_ins.keys(), self.agent_templates,self.sim_opts)
 
-        static_checks(simulation)  # todo remove funcs as 1st class ctz maybe
-
-        coins = []
-        traders = []
+        static_checks(simulation)
 
         ctx = ast.Context()
         for func in simulation.funcs:
@@ -68,6 +67,10 @@ class SimulationInterpreter:
 
         ctx[ast.TOKEN_TYPE.MARKET_KW] = market
         tree_interpreter = TreeInterpreter(ctx)
+
+        coins = []
+        traders = []
+        options = tree_interpreter(simulation.options)
 
         for agn in simulation.agents:
             agn: ast.AgentDec
@@ -85,4 +88,4 @@ class SimulationInterpreter:
                 coins.append(instance)
             else:
                 traders.append(instance)
-        return coins, traders
+        return coins, traders,options

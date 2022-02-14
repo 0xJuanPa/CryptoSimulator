@@ -10,6 +10,10 @@ class TrowableReturnContainer(Exception):
         self.value = value
 
 
+class TrowableBreak(Exception):
+    pass
+
+
 class TreeInterpreter:
     def __init__(self, global_context):
         self.global_context: Context = global_context
@@ -47,7 +51,8 @@ class TreeInterpreter:
         for opt in node.elements:
             opt: Assign
             opt.interpret(self, child)
-            res[opt.left.name] = child[opt.left.name]
+            value = child[opt.left.name]
+            res[opt.left.name] = self.make_native(value, ctx) if isinstance(value, FunDef) else value
         return res
 
     @visitor
@@ -77,13 +82,13 @@ class TreeInterpreter:
                 ret = retcontainer.value
             return ret
         else:
-          ret = self.native_call(func,args,ctx)
+            ret = self.native_call(func, args, ctx)
         return ret
 
-    def native_call(self,func,args,ctx):
+    def native_call(self, func, args, ctx):
         params: List[inspect.Parameter] = list(inspect.signature(func).parameters.values())
         kw = set(map(lambda p: p.name, filter(lambda p: p.kind == inspect.Parameter.KEYWORD_ONLY, params)))
-        args = [self.make_native(x) if isinstance(x, FunDef) else x for x in args]
+        args = [self.make_native(x) if isinstance(x, FunDef) else x for x in args]  # if is a func arg make it native
         kwargs = dict()
         if "my" in kw:
             kwargs["my"] = ctx[TOKEN_TYPE.MY_KW]
@@ -96,6 +101,7 @@ class TreeInterpreter:
     def interpret(self, node: BinaryOp, ctx):
         first = node.first.interpret(self, ctx)
         second = node.second.interpret(self, ctx)
+        # acording to python match this was made for cst and ast :V
         match node.op:
             case TOKEN_TYPE.PLUS:
                 res = first + second
@@ -153,12 +159,15 @@ class TreeInterpreter:
 
     @visitor
     def interpret(self, node: While, ctx):
-        while True:
-            condition = node.condition.interpret(self, ctx)
-            if condition:
-                node.body.interpret(self, ctx)
-            else:
-                break
+        try:
+            while True:
+                condition = node.condition.interpret(self, ctx)
+                if condition:
+                    node.body.interpret(self, ctx)
+                else:
+                    break
+        except TrowableBreak:
+            pass
 
     @visitor
     def interpret(self, node: StatementList, ctx):
@@ -174,13 +183,18 @@ class TreeInterpreter:
         raise TrowableReturnContainer(res)
 
     @visitor
+    def interpret(self, node: Break, ctx):
+        # crafting interpreters nice idea to stop execution flow
+        raise TrowableBreak()
+
+    @visitor
     def interpret(self, node: AttrRes, ctx):
         instance = ctx[node.parent.name]
         if isinstance(node.attr, Identifier):
             res = getattr(instance, node.attr.name)
         elif isinstance(node.attr, FunCall):
             func = getattr(type(instance), node.attr.name.name)
-            args =[]
+            args = []
             for expr in node.attr.Args.elements:
                 val = expr.interpret(self, ctx)
                 args.append(val)

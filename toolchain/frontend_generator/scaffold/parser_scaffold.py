@@ -104,7 +104,7 @@ class Parser:
         self.attributes_info = ast_types
         self.table: LRtable = LRtable.deserialize("""REPLACE-ME-PARSER""")
 
-    def __call__(self, tokens: List[Any]):
+    def __call__(self, tokens: List[Any],view=False):
         state_stack = [self.table.initial_state]
         symbol_stack = []
         cursor = 0
@@ -136,6 +136,8 @@ class Parser:
                 case self.table.Action.ACCEPT:
                     last_symbol = symbol_stack.pop()
                     assert last_symbol == self.table.initial_symbol  # just for fun :(
+                    if view:
+                        last_symbol.dbg_syms.view()
                     return last_symbol.content
                 case _:
                     expected = self.table.expect(curr_state)
