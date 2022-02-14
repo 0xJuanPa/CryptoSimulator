@@ -34,25 +34,43 @@ class TraderGeneticTemplate(TraderGenericTemplate):
         super().__init__(name, initial_money=initial_money)
         self.population_size = population_size
         self.optimized_attrs = []
+        self.population_funcs = dict()
+        self.mutation_funcs = dict()
 
     @staticmethod
-    def register_param(str,*,my):
+    def register_param(str, *, my):
         setattr(my, str, 0)
         my.optimized_attrs.append(str)
 
     @staticmethod
-    def optimize(gens, *, market,my):
+    def register_generator(str, func, *, my):
+        my.population_funcs[str] = func
+
+    @staticmethod
+    def register_mutator(str, func, *, my):
+        my.mutation_funcs[str] = func
+
+    @staticmethod
+    def optimize(gens, step_div=20, selection_div=5, *, market, my):
         print()
+
         def populatefunc():
             solutions = []
             for _ in range(my.population_size):
-                sol = [random.uniform(0, 1) for _ in my.optimized_attrs]
+                sol = []
+                for param in my.optimized_attrs:
+                    if param in my.population_funcs:
+                        resp = my.population_funcs[param]()
+                        sol.append(resp)
+                    else:
+                        sol.append(random.uniform(0, 1))
                 solutions.append(sol)
             return solutions
 
         def fitness(solution):
+            # run simulation in traders mind
             market.verbose = False
-            chunks = market.end_time // 20
+            chunks = market.end_time // step_div
             for attr, val in zip(my.optimized_attrs, solution):
                 setattr(my, attr, val)
             while market.time < market.end_time:
@@ -66,7 +84,7 @@ class TraderGeneticTemplate(TraderGenericTemplate):
 
         def stopcriteria(gen, solutions):
             if gens == gen:
-                fit,sol = next(iter(solutions))
+                fit, sol = next(iter(solutions))
                 print(f"Optimization completed {fit}")
                 for attr, val in zip(my.optimized_attrs, sol):
                     setattr(my, attr, val)
@@ -75,7 +93,7 @@ class TraderGeneticTemplate(TraderGenericTemplate):
             return None
 
         def selection(solutions):
-            sel = len(solutions) // 5  # 20%
+            sel = len(solutions) // selection_div  # default 5  # 20%
             newsel = list(itertools.islice(solutions, 0, sel))
             return newsel
 
@@ -86,7 +104,6 @@ class TraderGeneticTemplate(TraderGenericTemplate):
                 sol1 = random.choice(solutions)
                 sol2 = random.choice(solutions)
                 half = len(sol1) // 2
-                # cross the roulettes
                 new_sols1 = sol1[:half] + sol2[half:]
                 new_sols2 = sol2[:half] + sol1[half:]
                 new_gen.append(new_sols1)
@@ -96,12 +113,15 @@ class TraderGeneticTemplate(TraderGenericTemplate):
         def mutation(solutions):
             mutated = []
             for sol in solutions:
-                mut = [x + random.uniform(-0.1, 0.1) for x in sol]
-                for i in range(len(mut)):
-                    if mut[i] < 0:
-                        mut[i] = 0
-                    if mut[i] > 1:
-                        mut[i] = 1
+                mut = []
+                for param, val in zip(my.optimized_attrs, sol):
+                    if param in my.mutation_funcs:
+                        resp = my.mutation_funcs[param](val)
+                        mut.append(resp)
+                    else:
+                        resp = val + random.uniform(-0.1, 0.1)
+                        resp = min(max(resp, 0), 1)
+                        mut.append(resp)
                 mutated.append(mut)
             return mutated
 

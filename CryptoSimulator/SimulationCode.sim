@@ -8,7 +8,7 @@ f = my.base_value / Uniform(5,10);
 ret Uniform(-f,f) ;
 }
 
-coin DecreasingCoin : CoinGenericTemplate [initial_miners=5,base_value=200]
+coin DecreasingCoin : CoinGenericTemplate [base_value=200]
 {
 # Inverse coin
 update_parameters
@@ -28,7 +28,7 @@ my.value = my.base_value - my.base_value * completed + fluct + my.base_value/5;
 }
 
 
-coin GrowingCoin : CoinGenericTemplate [initial_miners=10,base_value=50]
+coin GrowingCoin : CoinGenericTemplate [base_value=50]
 {
 update_parameters
 {
@@ -39,7 +39,7 @@ my.value = my.base_value + completed*150  + fluctuation();
 }
 
 
-coin LocalMaxCoin : CoinGenericTemplate [initial_miners=10,base_value=50]
+coin LocalMaxCoin : CoinGenericTemplate [base_value=50]
 {
 update_parameters
 {
@@ -97,7 +97,9 @@ trade
    if Bernoulli(0.5) {
    coin_ = pick_cheaper_coin(market.wallet);
    amount = Uniform(0,my.money) // 1;
+   if amount {
    buy(coin_,amount);
+   }
    }
    }
    else {
@@ -114,17 +116,16 @@ trader GreedyWithKnowlege : TraderGenericTemplate [initial_money=50]
 # this is a greedy trader that keeps track on how much costed to try sell strategy
 trade
 {
-   #frenzy(buy,money,market.wallet);
    coin_picked = get_with_more_utility();
-   if coin_picked & Bernoulli(0.6) {
+   if coin_picked & Bernoulli(0.5) {
     sell(coin_picked,'all');
    }
    if my.money {
-   coin_ = coin_picked; # by this coin that has utility it could be good
+   coin_ = coin_picked; # this coin that has utility it could be good
    if !coin_ {
    coin_ = pick_random_coin(market.wallet);
    }
-   if Bernoulli(0.4){
+   if Bernoulli(0.5){
    amount = Uniform(0,my.money/2) // 1;
    buy(coin_,amount);
    }
@@ -164,7 +165,7 @@ my.register_param('tuned_buy');
 my.register_param('coin1');
 my.register_param('coin2');
 my.register_param('coin3');
-my.optimize(50); # 50 gens will be enough time for costly fobj
+my.optimize(60); # 60 gens will be enough time for costly fobj
 }
 
 

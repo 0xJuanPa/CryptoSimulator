@@ -19,8 +19,9 @@ class Simulation:
         self.end_time = 1
         self.step_size = 10
         self.verbose = True
+        self.repetitions = 1
 
-    def set_params(self, coins, traders, *, init_time=1, endtime, step_size=10):
+    def set_params(self, coins, traders, *, init_time=1, endtime, step_size=10, repetitions=1):
         self.wallet: list = coins
         self.traders: list = traders
         self.leaved: set = set()
@@ -28,6 +29,7 @@ class Simulation:
         self.time = init_time
         self.end_time = endtime
         self.step_size = step_size
+        self.repetitions = repetitions
 
     @staticmethod
     def _plot(names, values):
@@ -75,7 +77,7 @@ class Simulation:
         return sim
 
     def reset(self):
-        self.time = 1
+        self.time = self.init_time
         self.verbose = True
         self.leaved.clear()
         for coin in self.wallet:
@@ -90,34 +92,43 @@ class Simulation:
             trader.initialize()
         coins_values = []
         traders_values = []
-        while self.time < self.end_time:
-            c_v = []
-            for coin in self.wallet:
-                coin.update_parameters()
-                c_v.append(coin.value)
-            coins_values.append((self.time, c_v))
+        traders_average = [0] * len(traders)
+        for _ in range(self.repetitions):
+            self.reset()
+            coins_values.clear()
+            traders_values.clear()
+            while self.time < self.end_time:
+                c_v = []
+                for coin in self.wallet:
+                    coin.update_parameters()
+                    c_v.append(coin.value)
+                coins_values.append((self.time, c_v))
+                t_v = []
+                for trader in traders:
+                    if trader not in self.leaved:
+                        trader.trade()
+                        t_v.append(trader.money)
+                traders_values.append((self.time, t_v))
+                self.time += self.step_size
             t_v = []
-            for trader in traders:
-                if trader not in self.leaved:
-                    trader.trade()
-                    t_v.append(trader.money)
+            for i, trader in enumerate(traders):
+                try:
+                    leave(my=trader, market=self)
+                except TrowableReturnContainer:
+                    pass
+                traders_average[i] += trader.money
+                t_v.append(trader.money)
             traders_values.append((self.time, t_v))
-            self.time += self.step_size
 
         coins_name = list(map(lambda x: x.name, self.wallet))
         Simulation._plot(coins_name, coins_values)
 
         traders_name = list(map(lambda x: x.name, traders))
         Simulation._plot(traders_name, traders_values)
+        print("\n#### RESULTS ####")
+        for trader,money in zip(traders,traders_average):
+            print(f"{trader.name} : {money/self.repetitions}")
 
-        t_v = []
-        for trader in traders:
-            try:
-                leave(my=trader, market=self)
-            except TrowableReturnContainer:
-                pass
-            t_v.append(trader.money)
-        traders_values.append((self.time, t_v))
         Simulation._view()
 
 
