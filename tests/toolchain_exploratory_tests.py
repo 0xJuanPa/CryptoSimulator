@@ -15,7 +15,7 @@ A > i + plus+  A | i
 
 current_path = os.path.dirname(__file__)
 # g.write_lexer(current_path)
-g.write_lr1_parser(current_path)
+g.write_lr1_parser()
 
 
 
@@ -34,10 +34,11 @@ q0[None] = q1
 q1["a"] = q2
 q2["a"] = q3
 q2["b"] = q3
+nfa.view()
+dfa = nfa.get_dfa()
+dfa.view()
 
-# dfa = nfa.get_dfa()
-#
-# print()
+print()
 
 
 

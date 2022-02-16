@@ -137,7 +137,7 @@ class Parser:
                     last_symbol = symbol_stack.pop()
                     assert last_symbol == self.table.initial_symbol  # just for fun :(
                     if view:
-                        last_symbol.dbg_syms.view()
+                        last_symbol.view()
                     return last_symbol.content
                 case _:
                     expected = self.table.expect(curr_state)

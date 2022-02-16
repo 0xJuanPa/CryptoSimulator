@@ -386,6 +386,7 @@ class Grammar:
 
         if path is None:
             dfa.view()
+            return
 
         table.initial_state = dfa.initial_state.name
         for state in dfa.states:

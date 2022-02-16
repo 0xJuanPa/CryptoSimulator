@@ -71,4 +71,4 @@ result = genetic_flow(populate, fitness, stopcriteria, selection, recombination,
 
 # Gen 3638   [2.692911755498806, 1.558371139001558, -2.18054945681725] =>>  0.0004483105617261174 ranking 1000
 # perrfect for me
-print()
+print(f"{result} -> {func_obj(result)}")
