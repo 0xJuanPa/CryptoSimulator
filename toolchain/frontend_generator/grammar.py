@@ -49,10 +49,10 @@ class Symbol:
 
 
 class Terminal(Symbol):
-    def __init__(self, name: str, match: str, type_=None):
+    def __init__(self, name: str, match: str, extra=None):
         super().__init__(name)
         self.match = match
-        self.type = type_
+        self.extra = extra
 
 
 class Epsilon(Terminal):
@@ -96,6 +96,7 @@ class NonTerminal(Symbol):
 class SentenceForm(tuple):
     def __new__(cls, *symbols: Symbol):
         # filter all epsilons cause x+eps=x except if is only epsilon
+        # the case eps + eps + eps will not be managed oistrich technique
         arg = symbols if len(symbols) == 1 else list(filter(lambda s: not isinstance(s, Epsilon), symbols))
         t = tuple.__new__(cls, arg)
         return t
@@ -315,7 +316,7 @@ class Grammar:
     def write_lexer(self, path) -> None:
         table = LexerTable(eof="$", linebreaker="\n", spacer=" ")
         for t in filter(lambda s: not (isinstance(s, Epsilon) or isinstance(s, EOF)), self.terminals):
-            table.append((t.name, t.match, t.type))
+            table.append((t.name, t.match, t.extra))
         serial_str = table.get_serial_str()
         lexer_file = inspect.getfile(LexerTable)
         parser_content = open(lexer_file).read().replace("REPLACE-ME-LEXER", serial_str)

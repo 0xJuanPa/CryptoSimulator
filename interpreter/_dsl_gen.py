@@ -26,7 +26,6 @@ ifkw, elsekw, whilekw, retkw, breakkw, funkw = dsl.symbol_emit((ast.TOKEN_TYPE.I
 # spec keywords terminals
 traderkw, coinkw, mykw, marketkw, optionskw = dsl.symbol_emit((ast.TOKEN_TYPE.TRADER_KW, r"trader"),
                                                               (ast.TOKEN_TYPE.COIN_KW, r"coin "),
-                                                              # if I want them as keywords have to match  dot cause no lookaheads
                                                               (ast.TOKEN_TYPE.MY_KW, r"my"),
                                                               (ast.TOKEN_TYPE.MARKET_KW, r"market"),
                                                               (ast.TOKEN_TYPE.OPTS_KW, r"options"))

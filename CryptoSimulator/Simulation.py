@@ -32,21 +32,30 @@ class Simulation:
         self.repetitions = repetitions
 
     @staticmethod
-    def _plot(names, values):
+    def _plot(names, values, graph_name=""):
         # https://youtrack.jetbrains.com/issue/PY-52137 time wasted ON DEBUG
         import pandas as pd
         import seaborn as sns
         import matplotlib.pyplot as plt
+        plt.figure()
         sns.set_theme(style="whitegrid")
         times, values = map(list, zip(*values))
         data = pd.DataFrame(values, index=times, columns=names)
-        sns.lineplot(data=data)
-        plt.figure()
+        sns.lineplot(data=data).set_title(graph_name)
 
     @staticmethod
-    def _view():
+    def _makefigs(only_view=False):
         import matplotlib.pyplot as plt
-        plt.show()
+        from matplotlib.backends.backend_pdf import PdfPages
+        if only_view:
+            plt.show()
+        else:
+            filename = "plots.pdf"
+            pp = PdfPages(filename)
+            figs = [plt.figure(n) for n in plt.get_fignums()]
+            for fig in figs:
+                fig.savefig(pp, format='pdf')
+            pp.close()
 
     @staticmethod
     def _reflected_load(path, predicate) -> dict:
@@ -88,12 +97,18 @@ class Simulation:
 
     def run(self):
         traders = list(self.traders)
+        print("Initializing Traders")
         for trader in traders:
             trader.initialize()
         coins_values = []
         traders_values = []
         traders_average = [0] * len(traders)
-        for _ in range(self.repetitions):
+        coins_name = list(map(lambda x: x.name, self.wallet))
+        traders_name = list(map(lambda x: x.name, traders))
+        print("Traders Initialized")
+
+        for index in range(self.repetitions):
+            print(f"Running Simulation {index}")
             self.reset()
             coins_values.clear()
             traders_values.clear()
@@ -103,6 +118,7 @@ class Simulation:
                     coin.update_parameters()
                     c_v.append(coin.value)
                 coins_values.append((self.time, c_v))
+
                 t_v = []
                 for trader in traders:
                     if trader not in self.leaved:
@@ -119,17 +135,14 @@ class Simulation:
                 traders_average[i] += trader.money
                 t_v.append(trader.money)
             traders_values.append((self.time, t_v))
+            Simulation._plot(coins_name, coins_values, f"Coins Sim:{index}")
+            Simulation._plot(traders_name, traders_values, f"Traders Sim:{index}")
 
-        coins_name = list(map(lambda x: x.name, self.wallet))
-        Simulation._plot(coins_name, coins_values)
-
-        traders_name = list(map(lambda x: x.name, traders))
-        Simulation._plot(traders_name, traders_values)
         print("\n#### RESULTS ####")
-        for trader,money in zip(traders,traders_average):
-            print(f"{trader.name} : {money/self.repetitions}")
-
-        Simulation._view()
+        for trader, money in zip(traders, traders_average):
+            print(f"{trader.name} : {money / self.repetitions}")
+        print("Plotting")
+        Simulation._makefigs()
 
 
 if __name__ == "__main__":

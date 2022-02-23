@@ -1,6 +1,6 @@
 
 ##### SIMULATION CODE  #####
-options [init_time=1,endtime=1000,step_size=10]
+options [init_time=1,endtime=1000,step_size=10,repetitions=1]
 
 func fluctuation() {
 # my inherted my from caller
@@ -71,14 +71,14 @@ trade
    if amount {
    buy(coin_,amount);
    } else {
-   say('pass on buy');
+   say('Random Trader pass on buy');
    }
    }
    else {
     if !my.wallet {
         leave();
     }
-    say('almost leaved');
+    say('Random Trader almost leaved');
    }
 }
 }

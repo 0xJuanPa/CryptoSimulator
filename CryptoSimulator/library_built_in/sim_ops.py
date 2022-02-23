@@ -1,4 +1,7 @@
 import random
+import logging
+logging.basicConfig(filename="output.log",filemode="w",level=logging.INFO)
+
 
 from interpreter.tree_interpreter import TrowableReturnContainer
 
@@ -13,7 +16,7 @@ def say(str):
     '''
     alias for python print
     '''
-    print(str)
+    logging.info(str)
 
 
 def pick_coin(idx, wallet):
@@ -82,7 +85,7 @@ def buy(coin, amount=None, *, my, market):
     if my.money < 0.0001:
         my.money = 0  # avoid numerical errors on iee754 double
     if market.verbose:
-        print(msg + f" -> After Money {my.money} , Wallet {my.wallet}")
+        logging.info(msg + f" -> After Money {my.money} , Wallet {my.wallet}")
 
 
 def sell(coin, amount=None, *, my, market):
@@ -105,7 +108,7 @@ def sell(coin, amount=None, *, my, market):
         my.money += coin.value * amount
         my.wallet[coin] = after_purchase
     if market.verbose:
-        print(msg + f" -> After Money {my.money} , Wallet {my.wallet}")
+        logging.info(msg + f" -> After Money {my.money} , Wallet {my.wallet}")
 
 
 def leave(*, my, market):
@@ -117,5 +120,5 @@ def leave(*, my, market):
         sell(coin, amount, my=my, market=market)
     market.leaved.add(my)
     if market.verbose:
-        print(f"{repr(my)} Left, Arrived with {my.initial_money} ")
+        logging.info(f"{repr(my)} Left, Arrived with {my.initial_money} ")
     raise TrowableReturnContainer(None)
