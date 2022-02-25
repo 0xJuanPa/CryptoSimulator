@@ -1,6 +1,6 @@
 from collections import deque
 from itertools import chain, repeat
-from typing import Dict, List, Set, Callable, FrozenSet, Any, Iterable
+from typing import Dict, List, Set, Callable, FrozenSet, Any, Iterable, Tuple
 
 
 class State:
@@ -9,7 +9,7 @@ class State:
         self.final: bool = final
         self.transitions: Dict[Any, State] | None = dict()
         self.epsilon_transitions: List[State] | None = list()
-        self.content: Set | FrozenSet = content
+        self.content: Set | FrozenSet | Tuple = content
 
     def get_copy(self, prefix) -> "State":
         name = None if prefix is None else prefix + self.name
@@ -28,7 +28,7 @@ class State:
         return hash(self.name)  # hash idempotent on int
 
     def __eq__(self, other: "State"):
-        return self.name == other.name
+        return hash(self) == hash(other)
 
     def __add__(self, other: "State"):
         name = None  # int(str(self.name) + str(other.name))
@@ -121,12 +121,12 @@ class Automaton:
         return new_automaton
 
     @staticmethod
-    def _get_goto(states: Iterable[State], symbol) -> frozenset[State]:
-        goto = frozenset([st[symbol] for st in states if st[symbol] is not None])
+    def _get_goto(states: Iterable[State], symbol) -> Tuple[State]:
+        goto = tuple(sorted(set([st[symbol] for st in states if st[symbol] is not None]),key=hash))
         return goto
 
     @staticmethod
-    def _get_epsilon_closure_of(states: Iterable[State]) -> frozenset[State]:
+    def _get_epsilon_closure_of(states: Iterable[State]) -> Tuple[State]:
         visited = set()
         mdfs_stack = list(states)  # recursion not good in python
         while mdfs_stack:
@@ -134,24 +134,25 @@ class Automaton:
             visited.add(state)
             not_visited = list(filter(lambda s: s not in visited, state.epsilon_transitions))
             mdfs_stack.extend(not_visited)
-        return frozenset(visited)
+        res = tuple(sorted(visited,key=hash))
+        return res
 
     @staticmethod
-    def powerset_construct(initial_value: Iterable[Any], goto_func: Callable[[FrozenSet, Any], FrozenSet],
-                           closure_func: Callable[[Any], FrozenSet], state_maker: Callable[[FrozenSet], State],
-                           transition_symbol_mapper: Callable[[Any], Any]) -> "Automaton":
+    def powerset_construct(initial_value: Iterable[Any], goto_func: Callable[[Tuple, Any], Tuple],
+                           closure_func: Callable[[Any], Tuple], state_maker: Callable[[Tuple], State],
+                           transition_symbol_resolver: Callable[[Any], Any]) -> "Automaton":
         # Rabin–Scott powerset construction
         dfa = Automaton()
         start_closure = closure_func(initial_value)
         init_state = state_maker(start_closure)
         dfa.add_state(init_state)
-        added: Dict[frozenset, State] = {start_closure: init_state}
+        added: Dict[Tuple, State] = {start_closure: init_state}
         pending_closures = deque([start_closure])  # just to mantain the order for dbg
 
         while pending_closures:
             subset = pending_closures.popleft()
             state = added[subset]
-            transition_symbols = set(chain.from_iterable(transition_symbol_mapper(x) for x in subset))
+            transition_symbols = transition_symbol_resolver(subset)
             for symbol in transition_symbols:
                 goto = goto_func(subset, symbol)
                 goto_closure = closure_func(goto)
@@ -170,12 +171,13 @@ class Automaton:
     def get_dfa(self) -> "Automaton":
         if self.is_dfa():
             return self
-        transition_symbol_mapper: Callable[[Any], Any] = lambda state: state.get_transition_symbols()
+        transition_symbol_resolver: Callable[[Any], Any] = \
+            lambda subset: sorted(set(chain.from_iterable(x.get_transition_symbols() for x in subset)),key=hash)
         state_maker: Callable[[Any], int | Any] = lambda subset: sum(subset)
         goto_func = self._get_goto
         closure_func = self._get_epsilon_closure_of
         initial_value = [self.initial_state]
-        dfa = self.powerset_construct(initial_value, goto_func, closure_func, state_maker, transition_symbol_mapper)
+        dfa = self.powerset_construct(initial_value, goto_func, closure_func, state_maker, transition_symbol_resolver)
         return dfa
 
     def __repr__(self):

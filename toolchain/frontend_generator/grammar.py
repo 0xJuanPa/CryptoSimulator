@@ -39,6 +39,7 @@ class Symbol:
             raise TypeError(f"Invalid type: {type(other)}")
 
     def __hash__(self):
+        # https://stackoverflow.com/questions/27522626/hash-function-in-python-3-3-returns-different-results-between-sessions
         return hash(self.name)
 
     def __eq__(self, other: "Symbol"):
@@ -184,7 +185,7 @@ class LRitem:
         self.dot_pos = dot_pos
         if isinstance(self.production.right_part[0], Epsilon):  # trick to make epsilon items as reduce items
             self.dot_pos += 1
-        self.lookaheads = frozenset(list(lookaheads) if lookaheads is not None else list())
+        self.lookaheads = tuple(sorted(set(lookaheads if lookaheads is not None else list()), key=hash))
 
     @property
     def is_reduce(self):
@@ -286,11 +287,12 @@ class Grammar:
         res2 = res if allow_eps else res - {self.epsilon}
         return res2
 
-    def _get_lr1_goto(self, items: Iterable[LRitem], symbol: Symbol) -> frozenset[LRitem]:
-        goto = frozenset(item.advance_dot() for item in items if symbol == item.peek_nxt_symbol())
+    def _get_lr1_goto(self, items: Iterable[LRitem], symbol: Symbol) -> tuple[LRitem]:
+        goto = tuple(sorted(set(item.advance_dot() for item in items if
+                                item.peek_nxt_symbol() is not None and symbol == item.peek_nxt_symbol()), key=hash))
         return goto
 
-    def _get_lr1_closure(self, items: Iterable[LRitem]) -> frozenset[LRitem]:
+    def _get_lr1_closure(self, items: Iterable[LRitem]) -> tuple[LRitem]:
         # lr1 closure is get all .Nonterminal items with theri lookaheads
         closure = deque(items)
         canonical: Dict[LRitem, LRitem] = {i.get_as_item_lr0(): i for i in items}
@@ -298,19 +300,19 @@ class Grammar:
             item = closure.popleft()
             next_symbol = item.peek_nxt_symbol()
             if isinstance(next_symbol, NonTerminal):
-                lookaheads = set()
+                calc_lookaheads = set()
                 for sf_plh in item.remain_with_each_lkahead():
                     local_first = self._get_first(sf_plh, allow_eps=False)  # as follow cant contain eps
-                    lookaheads.update(local_first)
+                    calc_lookaheads.update(local_first)
                 for prod in next_symbol.associated_productions:
                     lr0_itm = LRitem(prod)
                     if (itm := canonical.get(lr0_itm, None)) is None:
-                        itm = LRitem(prod, 0, lookaheads)
+                        itm = LRitem(prod, 0, calc_lookaheads)
                         canonical[lr0_itm] = itm
                         closure.append(itm)
                     else:
-                        itm.lookaheads = frozenset(chain(itm.lookaheads, lookaheads))
-        res = frozenset(canonical.values())
+                        itm.lookaheads = tuple(sorted(set(chain(itm.lookaheads, calc_lookaheads)), key=hash))
+        res = tuple(canonical.values())
         return res
 
     def write_lexer(self, path) -> None:
@@ -377,13 +379,15 @@ class Grammar:
         S0 > self.initial_symbol
         self.initial_symbol = S0
 
-        transition_sym_mapper: Callable[[LRitem], Any] = \
-            lambda it: [] if (ns := it.peek_nxt_symbol()) is None else [ns]
+        transition_symbol_resolver: Callable[[LRitem], Any] = \
+            lambda subset: sorted(set(ns for x in subset if (ns := x.peek_nxt_symbol()) is not None), key=hash)
+
         state_maker: Callable[[Any], int | Any] = lambda subset: State(None, final=True, content=subset)
         goto_func = self._get_lr1_goto
         closure_func = self._get_lr1_closure
         initial_value = [LRitem(next(iter(self.initial_symbol.associated_productions)), lookaheads=[self.eof])]
-        dfa = Automaton.powerset_construct(initial_value, goto_func, closure_func, state_maker, transition_sym_mapper)
+        dfa = Automaton.powerset_construct(initial_value, goto_func, closure_func, state_maker,
+                                           transition_symbol_resolver)
 
         if path is None:
             dfa.view()
@@ -410,6 +414,9 @@ class Grammar:
                         table.action((state.name, symbol.name), (LRtable.Action.SHIFT, state[symbol.name].name))
                     else:
                         table.goto((state.name, symbol.name), state[symbol.name].name)
+
+        print(f"Automaton States Count:{len(dfa.states)}")
+        print(f"Actions:{len(table._action)} Gotos:{len(table._goto)}")
 
         serial_str = table.get_serial_str()
         parser_file = inspect.getfile(ReduceInfo)
