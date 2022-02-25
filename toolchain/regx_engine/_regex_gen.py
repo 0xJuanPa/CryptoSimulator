@@ -15,7 +15,7 @@ o_par, c_par, o_bra, c_bra, gt, lt, p = \
     rx.symbol_emit(*list(zip(*[iter(r"o_par,(,c_par,),o_bra,[,c_bra,],gt,>,lt,<,p,P".split(","))] * 2)))
 
 # special one that will be recognized in ComplementDummy Matcher
-char_ = rx.symbol_emit(("char", "", ""))
+char_ = rx.symbol_emit(("char", ""))
 
 # Non Terminals
 Regex, ConcatenationRx, ClosureRx, AtomRx, GroupRx, PositiveSetRx, NegativeSetRx \

@@ -245,8 +245,8 @@ class Grammar:
                     res.append(sym)
                     self.non_terminals.append(sym)
                 case tuple(s):
-                    typ = s[2] if len(s) > 2 else None
-                    sym = Terminal(s[0], s[1], type_=typ)
+                    extra = s[2] if len(s) > 2 else None
+                    sym = Terminal(s[0], s[1], extra=extra)
                     res.append(sym)
                     self.terminals.append(sym)
                 case _:
