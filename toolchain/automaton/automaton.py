@@ -95,7 +95,8 @@ class Automaton:
             graph.attr("node", shape=("doublecircle" if src.final else "circle"))
             graph.node(src_rpr)
             for e, dst in chain(src.transitions.items(), zip(repeat(None), src.epsilon_transitions)):
-                e_repr = str(e) if e is not None else "€"
+                e_repr = "'" + (
+                    str(e).encode('unicode_escape').decode('ascii').replace("\\", "/") if e is not None else "€") + "'"
                 dst_rpr = repr_n(dst)
                 graph.attr("node", shape=("doublecircle" if dst.final else "circle"))
                 graph.node(dst_rpr)
@@ -122,7 +123,7 @@ class Automaton:
 
     @staticmethod
     def _get_goto(states: Iterable[State], symbol) -> Tuple[State]:
-        goto = tuple(sorted(set([st[symbol] for st in states if st[symbol] is not None]),key=hash))
+        goto = tuple(sorted(set([st[symbol] for st in states if st[symbol] is not None]), key=hash))
         return goto
 
     @staticmethod
@@ -134,7 +135,7 @@ class Automaton:
             visited.add(state)
             not_visited = list(filter(lambda s: s not in visited, state.epsilon_transitions))
             mdfs_stack.extend(not_visited)
-        res = tuple(sorted(visited,key=hash))
+        res = tuple(sorted(visited, key=hash))
         return res
 
     @staticmethod
@@ -172,7 +173,7 @@ class Automaton:
         if self.is_dfa():
             return self
         transition_symbol_resolver: Callable[[Any], Any] = \
-            lambda subset: sorted(set(chain.from_iterable(x.get_transition_symbols() for x in subset)),key=hash)
+            lambda subset: sorted(set(chain.from_iterable(x.get_transition_symbols() for x in subset)), key=hash)
         state_maker: Callable[[Any], int | Any] = lambda subset: sum(subset)
         goto_func = self._get_goto
         closure_func = self._get_epsilon_closure_of
